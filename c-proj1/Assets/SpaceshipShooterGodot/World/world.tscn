@@ -1,0 +1,71 @@
+[gd_scene load_steps=9 format=3 uid="uid://dyvfhgc132j2m"]
+
+[ext_resource type="Shader" path="res://Backgrounds/auto_scroller.gdshader" id="1_k8mgq"]
+[ext_resource type="Texture2D" uid="uid://dfrxi0nn6dfbf" path="res://Backgrounds/Desert/desert-backgorund.png" id="2_r3gcs"]
+[ext_resource type="Texture2D" uid="uid://rbji7aslwmkc" path="res://Backgrounds/Desert/clouds.png" id="3_lf5ox"]
+[ext_resource type="Script" path="res://World/TextureClouds.gd" id="4_nk7aq"]
+[ext_resource type="AudioStream" uid="uid://cbhwfj02kukm0" path="res://Music/spaceship shooter .ogg" id="5_o41ba"]
+[ext_resource type="PackedScene" uid="uid://jogyu6amdofk" path="res://Player/player.tscn" id="5_wbj7t"]
+[ext_resource type="PackedScene" uid="uid://bwodlfhu0ts4e" path="res://Enemies/enemy_ship_small.tscn" id="7_flyil"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wo432"]
+shader = ExtResource("1_k8mgq")
+shader_parameter/direction = Vector2(0, -5)
+shader_parameter/speed_scale = 0.02
+
+[node name="World" type="Node2D"]
+
+[node name="Backgrounds" type="Node2D" parent="."]
+
+[node name="BackgroundTexture" type="TextureRect" parent="Backgrounds"]
+material = SubResource("ShaderMaterial_wo432")
+offset_right = 256.0
+offset_bottom = 340.0
+texture = ExtResource("2_r3gcs")
+stretch_mode = 1
+
+[node name="TextureClouds" type="Sprite2D" parent="Backgrounds"]
+modulate = Color(1, 1, 1, 0.756863)
+texture = ExtResource("3_lf5ox")
+centered = false
+script = ExtResource("4_nk7aq")
+
+[node name="TextureClouds2" type="Sprite2D" parent="Backgrounds"]
+modulate = Color(1, 1, 1, 0.443137)
+position = Vector2(0, 126)
+texture = ExtResource("3_lf5ox")
+centered = false
+script = ExtResource("4_nk7aq")
+speed = 300.0
+
+[node name="TextureClouds3" type="Sprite2D" parent="Backgrounds"]
+modulate = Color(1, 1, 1, 0.443137)
+position = Vector2(0, 126)
+texture = ExtResource("3_lf5ox")
+centered = false
+script = ExtResource("4_nk7aq")
+speed = 140.0
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="EnemyShipSmall" parent="Enemies" instance=ExtResource("7_flyil")]
+position = Vector2(35, 125)
+
+[node name="EnemyShipSmall2" parent="Enemies" instance=ExtResource("7_flyil")]
+position = Vector2(203, 88)
+
+[node name="EnemyShipSmall3" parent="Enemies" instance=ExtResource("7_flyil")]
+position = Vector2(147, 320)
+
+[node name="EnemyShipSmall4" parent="Enemies" instance=ExtResource("7_flyil")]
+position = Vector2(78, 181)
+
+[node name="EnemyShipSmall5" parent="Enemies" instance=ExtResource("7_flyil")]
+position = Vector2(136, 7)
+
+[node name="Player" parent="." instance=ExtResource("5_wbj7t")]
+position = Vector2(126, 234)
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_o41ba")
+autoplay = true

@@ -1,0 +1,36 @@
+[gd_scene load_steps=6 format=3 uid="uid://bwodlfhu0ts4e"]
+
+[ext_resource type="Texture2D" uid="uid://ddmpd1feix0fm" path="res://Enemies/enemy-small.png" id="1_mw5h4"]
+[ext_resource type="Script" path="res://Enemies/enemy_ship.gd" id="1_ooyku"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_j1ogv"]
+atlas = ExtResource("1_mw5h4")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2yede"]
+atlas = ExtResource("1_mw5h4")
+region = Rect2(16, 0, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_u8oec"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_j1ogv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2yede")
+}],
+"loop": true,
+"name": &"default",
+"speed": 120.0
+}]
+
+[node name="EnemyShipSmall" type="Area2D"]
+script = ExtResource("1_ooyku")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_u8oec")
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+
+[connection signal="screen_exited" from="VisibleOnScreenNotifier2D" to="." method="_on_visible_on_screen_notifier_2d_screen_exited"]
