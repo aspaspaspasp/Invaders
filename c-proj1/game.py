@@ -239,8 +239,8 @@ class SpriteSheet:
         w, h = raw.get_size()
         self.cols   = w // frame_w
         self.rows   = h // frame_h
-        self.fw     = frame_w * scale
-        self.fh     = frame_h * scale
+        self.fw     = round(frame_w * scale)
+        self.fh     = round(frame_h * scale)
         self.frames = []
         for r in range(self.rows):
             for c in range(self.cols):
@@ -258,14 +258,13 @@ def load_sprites():
     def p(name):
         return os.path.join(ASSETS_DIR, name)
     return {
-        "ship":   SpriteSheet(p("ship.png"),          16, 24, scale=2),
+        "ship":   SpriteSheet(p("ship.png"),          16, 24, scale=2.2),
         "e_big":  SpriteSheet(p("enemy-big.png"),     32, 32, scale=1),
         "e_med":  SpriteSheet(p("enemy-medium.png"),  16, 16, scale=2),
         "e_sml":  SpriteSheet(p("enemy-small.png"),   16, 16, scale=2),
         "bolt":   SpriteSheet(p("laser-bolts.png"),   16, 16, scale=1),
         "expl":   SpriteSheet(p("explosion.png"),     16, 16, scale=3),
         "heart":  SpriteSheet(p("heart.png"),         16, 16, scale=2),
-        "clover": SpriteSheet(p("clover.png"),        16, 16, scale=2),
         "boss":   SpriteSheet(p("enemy-big.png"),     32, 32, scale=3),
     }
 
@@ -274,63 +273,135 @@ def load_sprites():
 class Player:
     WIDTH  = 32
     HEIGHT = 32
-    SPEED  = 4
-    SHOOT_COOLDOWN = 20
 
-    SHIP_FRAMES = {"default": [2, 7], "left": [0, 5], "right": [4, 9]}
-
+    SHIP_FRAMES    = {"default": [2, 7], "left": [0, 5], "right": [4, 9]}
+    SPEED          = 4
+    SHOOT_COOLDOWN = 3
     def __init__(self, sprites):
-        self.x          = WIDTH // 2
-        self.y          = HEIGHT - 60
-        self.lives      = 3
-        self.cooldown   = 0
-        self.invincible = 0
-        self.facing     = "default"
-        self.tick       = 0
-        self.frame_idx  = 0
-        self.sprites      = sprites
-        self.move_hold    = 0   # frames a movement key has been held continuously
+        self.x             = WIDTH // 2
+        self.y             = HEIGHT - 60
+        self.lives         = 3
+        self.invincible    = 0
+        self.facing        = "default"
+        self.tick          = 0
+        self.frame_idx     = 0
+        self.sprites       = sprites
         self.hit_explosion = None
+        self.cooldown      = 0
+        self.salvo_charge   = 0     # frames SPACE held (60 = fire)
+        self.salvo_cooldown = 0
+        self.salvo_queue    = []    # [(frames_delay, [(vx,vy),...]), ...]
+        self.vel_x         = 0.0
+        self.vel_y         = 0.0
 
-    def update(self, keys):
-        # freeze movement while explosion plays
-        if self.hit_explosion and not self.hit_explosion.done:
-            self.move_hold = 0
-            self.facing    = "default"
+    def update(self, keys, fire_pressed=None):
+        """Move, fire (Z/X), animate. Returns list of Bullet objects fired this frame."""
+        bullets = []
+
+        exploding = self.hit_explosion and not self.hit_explosion.done
+
+        # ── movement with inertia ─────────────────────────────────────────────
+        max_spd     = self.SPEED
+        accel       = max_spd * 0.12         # reach full speed in ~8 frames
+        friction    = 0.86 if exploding else 0.92
+
+        if exploding:
+            self.vel_x *= friction
+            self.vel_y *= friction
+            self.facing = "default"
         else:
-            moving = (keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]
-                      or keys[pygame.K_UP] or keys[pygame.K_DOWN])
-            if moving:
-                self.move_hold += 1
-            else:
-                self.move_hold = 0
-            # After 0.5 seconds (30 frames) of continuous movement, boost speed 50%
-            speed = int(self.SPEED * 1.50) if self.move_hold >= 30 else self.SPEED
+            cap = max_spd
 
-            if keys[pygame.K_LEFT] and self.x - self.WIDTH // 2 > 0:
-                self.x -= speed
+            # horizontal
+            if keys[pygame.K_LEFT]:
+                self.vel_x = max(self.vel_x - accel, -cap)
                 self.facing = "left"
-            elif keys[pygame.K_RIGHT] and self.x + self.WIDTH // 2 < WIDTH:
-                self.x += speed
+            elif keys[pygame.K_RIGHT]:
+                self.vel_x = min(self.vel_x + accel,  cap)
                 self.facing = "right"
             else:
+                self.vel_x *= friction
                 self.facing = "default"
+            self.vel_x = max(-cap, min(cap, self.vel_x))
 
-            if keys[pygame.K_UP]   and self.y - self.HEIGHT // 2 > 0:
-                self.y -= speed
-            if keys[pygame.K_DOWN] and self.y + self.HEIGHT // 2 < HEIGHT:
-                self.y += speed
+            # vertical
+            if keys[pygame.K_UP]:
+                self.vel_y = max(self.vel_y - accel, -cap)
+            elif keys[pygame.K_DOWN]:
+                self.vel_y = min(self.vel_y + accel,  cap)
+            else:
+                self.vel_y *= friction
+            self.vel_y = max(-cap, min(cap, self.vel_y))
 
+        # snap tiny velocities to zero to avoid endless micro-drift
+        if abs(self.vel_x) < 0.3: self.vel_x = 0.0
+        if abs(self.vel_y) < 0.3: self.vel_y = 0.0
+
+        # apply velocity with boundary clamping
+        nx = self.x + self.vel_x
+        if nx - self.WIDTH // 2 < 0:
+            nx = self.WIDTH // 2;  self.vel_x = 0.0
+        elif nx + self.WIDTH // 2 > WIDTH:
+            nx = WIDTH - self.WIDTH // 2;  self.vel_x = 0.0
+        self.x = nx
+
+        ny = self.y + self.vel_y
+        if ny - self.HEIGHT // 2 < 0:
+            ny = self.HEIGHT // 2;  self.vel_y = 0.0
+        elif ny + self.HEIGHT // 2 > HEIGHT:
+            ny = HEIGHT - self.HEIGHT // 2;  self.vel_y = 0.0
+        self.y = ny
+
+        # ── manual fire (Z or X, suppressed while exploding) ─────────────────────
+        if self.cooldown > 0:
+            self.cooldown -= 1
+        if self.salvo_cooldown > 0:
+            self.salvo_cooldown -= 1
+
+        # ── process queued salvo bursts ───────────────────────────────────────
+        new_queue = []
+        for (t, burst) in self.salvo_queue:
+            if t <= 0:
+                for vx, vy in burst:
+                    bullets.append(Bullet(self.x, self.y - 20, vy, "player",
+                                          self.sprites, vx=vx))
+            else:
+                new_queue.append((t - 1, burst))
+        self.salvo_queue = new_queue
+
+        if not exploding:
+            both_held = keys[pygame.K_SPACE]
+            if both_held:
+                self.salvo_charge += 1
+                if self.salvo_charge >= 60 and self.salvo_cooldown == 0:
+                    self.salvo_charge   = 0
+                    self.salvo_cooldown = 45
+                    spd = 8
+                    angles = [-77 + i * 22 for i in range(8)]
+                    burst = [(math.sin(math.radians(a)) * spd,
+                              -math.cos(math.radians(a)) * spd) for a in angles]
+                    for delay in (0, 4, 8):
+                        self.salvo_queue.append((delay, burst))
+            else:
+                self.salvo_charge = 0
+                if fire_pressed is not None and self.cooldown == 0:
+                    self.cooldown = self.SHOOT_COOLDOWN
+                    ox = -11 if fire_pressed == pygame.K_z else 11
+                    bullets.append(Bullet(self.x + ox, self.y - 20, -8, "player", self.sprites))
+
+        # ── hit explosion ─────────────────────────────────────────────────────
         if self.hit_explosion and not self.hit_explosion.done:
             self.hit_explosion.update()
         elif self.hit_explosion and self.hit_explosion.done:
             self.hit_explosion = None
-        if self.cooldown   > 0: self.cooldown   -= 1
+
         if self.invincible > 0: self.invincible -= 1
         self.tick += 1
         if self.tick >= ANIM_RATE:
             self.tick = 0
             self.frame_idx = (self.frame_idx + 1) % 2
+
+        return bullets
 
     def animate(self):
         """Advance the idle animation without processing movement."""
@@ -339,12 +410,6 @@ class Player:
         if self.tick >= ANIM_RATE:
             self.tick = 0
             self.frame_idx = (self.frame_idx + 1) % 2
-
-    def shoot(self):
-        if self.cooldown == 0:
-            self.cooldown = self.SHOOT_COOLDOWN
-            return Bullet(self.x, self.y - 20, -8, "player", self.sprites)
-        return None
 
     def hit(self):
         if self.invincible == 0:
@@ -368,14 +433,22 @@ class Player:
         frame = self.sprites["ship"].get(idx)
         fw, fh = frame.get_size()
         surface.blit(frame, (self.x - fw // 2, self.y - fh // 2))
-        pygame.draw.rect(surface, (0, 0, 0), self.rect(), 1)
+        if self.salvo_charge >= 6:
+            bar_w   = 44
+            bar_h   = 4
+            fill_w  = int(bar_w * min(self.salvo_charge - 6, 54) / 54)
+            bx      = int(self.x) - bar_w // 2
+            by      = int(self.y) + self.sprites["ship"].fh // 2 + 4
+            pygame.draw.rect(surface, (60, 60, 60),     (bx, by, bar_w, bar_h))
+            pygame.draw.rect(surface, (255, 200, 0),    (bx, by, fill_w, bar_h))
+            pygame.draw.rect(surface, (255, 240, 120),  (bx, by, bar_w, bar_h), 1)
 
 
 # ── Bullet ────────────────────────────────────────────────────────────────────
 class Bullet:
     FRAMES = {"player": [2, 3], "enemy": [0, 1]}
 
-    def __init__(self, x, y, vy, kind, sprites, vx=0):
+    def __init__(self, x, y, vy, kind, sprites, vx=0, bounced=False):
         self.x         = x
         self.y         = y
         self.vx        = vx
@@ -384,6 +457,7 @@ class Bullet:
         self.sheet     = sprites["bolt"]
         self.tick      = 0
         self.frame_idx = 0
+        self.bounced   = bounced
 
     def update(self):
         self.x += self.vx
@@ -427,6 +501,11 @@ class Explosion:
             if self.frame_idx >= self.TOTAL_FRAMES:
                 self.done = True
 
+    def rect(self):
+        frame = self.sheet.get(self.frame_idx)
+        fw, fh = frame.get_size()
+        return pygame.Rect(self.x - fw // 2, self.y - fh // 2, fw, fh)
+
     def draw(self, surface):
         if self.done:
             return
@@ -441,6 +520,8 @@ class Enemy:
     HEIGHT      = 32
     ENTRY_SPEED = 3.0
     N_FRAMES    = {"e_big": 2, "e_med": 4, "e_sml": 2}
+    MAX_HP      = {"e_sml": 2, "e_med": 3, "e_big": 5}
+    FLASH_DUR   = 12   # frames (0.2 s at 60 fps)
 
     def __init__(self, target_x, target_y, key, sprites, entry_delay=0):
         self.target_x     = float(target_x)
@@ -451,6 +532,8 @@ class Enemy:
         self.sheet        = sprites[key]
         self.n_frames     = self.N_FRAMES[key]
         self.alive        = True
+        self.hp           = self.MAX_HP[key]
+        self.flash_timer  = 0
         self.entry_delay  = entry_delay
         self.delay_timer  = 0
         self.in_formation = False
@@ -474,6 +557,15 @@ class Enemy:
         else:
             self.y += self.entry_speed
 
+    def hit(self):
+        """Register one hit. Returns True if the enemy is now dead."""
+        self.hp -= 1
+        self.flash_timer = self.FLASH_DUR
+        if self.hp <= 0:
+            self.alive = False
+            return True
+        return False
+
     def rect(self):
         hw, hh = self.WIDTH // 2, self.HEIGHT // 2
         return pygame.Rect(int(self.x) - hw, int(self.y) - hh, self.WIDTH, self.HEIGHT)
@@ -481,7 +573,12 @@ class Enemy:
     def draw(self, surface, frame_idx):
         if self.y + self.HEIGHT // 2 < 0:
             return
-        frame  = self.sheet.get(frame_idx % self.n_frames)
+        frame = self.sheet.get(frame_idx % self.n_frames)
+        if self.flash_timer > 0:
+            frame = frame.copy()
+            red = pygame.Surface(frame.get_size())
+            red.fill((160, 0, 0))
+            frame.blit(red, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
         fw, fh = frame.get_size()
         surface.blit(frame, (int(self.x) - fw // 2, int(self.y) - fh // 2))
 
@@ -653,6 +750,8 @@ class EnemyFleet:
             return []
 
         for e in living:
+            if e.flash_timer > 0:
+                e.flash_timer -= 1
             e.update_entry()
 
         if self.all_in_formation:
@@ -759,8 +858,7 @@ class Boss:
             self.phase       = new_phase
             self.flash_timer = 20
             if new_phase in (2, 3):   # end of phase 1 or 2
-                self.drop_timers.append([0,  "heart"])
-                self.drop_timers.append([60, "clover"])  # 1 s later
+                self.drop_timers.append([0, "heart"])
                 # queue 6 explosions, 0.5 s (30 frames) apart, random offset 5-35 px
                 for i in range(6):
                     angle = random.uniform(0, 2 * math.pi)
@@ -906,10 +1004,11 @@ class Boss:
         surface.blit(label, ((WIDTH - label.get_width()) // 2, by - label.get_height() - 2))
 
 
-# ── Star field ────────────────────────────────────────────────────────────────
+# ── Background ────────────────────────────────────────────────────────────────
 class ParallaxBackground:
-    BG_SPEED    = 0.4   # px/frame — desert layer (slowest)
-    CLOUD_SPEED = 1.2   # px/frame — cloud layer (3× faster)
+    SKY_COLOR   = (20, 24, 60)  # dark navy
+    BG_SPEED    = 0.5           # px/frame — opaque clouds (slow)
+    CLOUD_SPEED = 1.4           # px/frame — transparent clouds (fast)
 
     def __init__(self):
         _base = os.path.join(os.path.dirname(__file__), "Assets", "Desert", "backgrounds")
@@ -921,31 +1020,29 @@ class ParallaxBackground:
             nh = int(ih * WIDTH / iw)
             return pygame.transform.scale(raw, (WIDTH, nh))
 
-        self.bg     = load_scaled("desert-backgorund.png")
-        self.clouds = load_scaled("clouds-transparent.png", alpha=True)
-        self.bg_h     = self.bg.get_height()      # ~510
-        self.cloud_h  = self.clouds.get_height()  # ~193
+        self.bg       = load_scaled("clouds.png")
+        self.fg       = load_scaled("clouds-transparent.png", alpha=True)
+        self.bg_h     = self.bg.get_height()
+        self.fg_h     = self.fg.get_height()
         self.bg_y     = 0.0
-        self.cloud_y  = 0.0
+        self.fg_y     = 0.0
         self._overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        self._overlay.fill((0, 0, 0, 160))   # alpha 0-255; 160 ≈ 63% dark
+        self._overlay.fill((0, 0, 0, 120))
 
     def update(self):
-        self.bg_y    = (self.bg_y    + self.BG_SPEED)    % self.bg_h
-        self.cloud_y = (self.cloud_y + self.CLOUD_SPEED) % self.cloud_h
+        self.bg_y = (self.bg_y + self.BG_SPEED)    % self.bg_h
+        self.fg_y = (self.fg_y + self.CLOUD_SPEED) % self.fg_h
 
     def draw(self, surface):
-        # tile desert bg vertically
+        surface.fill(self.SKY_COLOR)
         y = int(self.bg_y) - self.bg_h
         while y < HEIGHT:
             surface.blit(self.bg, (0, y))
             y += self.bg_h
-        # tile clouds on top (transparent)
-        y = int(self.cloud_y) - self.cloud_h
+        y = int(self.fg_y) - self.fg_h
         while y < HEIGHT:
-            surface.blit(self.clouds, (0, y))
-            y += self.cloud_h
-        # dark overlay to boost contrast with sprites
+            surface.blit(self.fg, (0, y))
+            y += self.fg_h
         surface.blit(self._overlay, (0, 0))
 
 
@@ -980,25 +1077,17 @@ class Pickup:
 
 
 # ── HUD ───────────────────────────────────────────────────────────────────────
-def draw_hud(surface, font, score, player, wave_idx, heart_chance, muted=False):
+def draw_hud(surface, font, score, player, wave_idx, muted=False):
     surface.blit(font.render(f"SCORE  {score:06d}", True, WHITE), (10, 10))
     lives_text = font.render("LIVES " + "♥ " * player.lives, True, RED)
-    lx = WIDTH - lives_text.get_width() - 10
-    surface.blit(lives_text, (lx, 10))
+    surface.blit(lives_text, (WIDTH - lives_text.get_width() - 10, 10))
     name_text = font.render(WAVE_NAMES[wave_idx], True, CYAN)
     surface.blit(name_text, ((WIDTH - name_text.get_width()) // 2, 10))
-    # ── heart-drop chance bar ────────────────────────────────────────────────
-    bar_w, bar_h = lives_text.get_width(), 6
-    bx, by = lx, 24
-    pygame.draw.rect(surface, (60, 60, 60), (bx, by, bar_w, bar_h))
-    fill_w = int(bar_w * (heart_chance - 0.05) / 0.45)   # 5%→0 … 50%→full
-    pygame.draw.rect(surface, (220, 40, 40), (bx, by, fill_w, bar_h))
-    pct_text = font.render(f"{int(heart_chance*100)}%", True, RED)
-    surface.blit(pct_text, (bx - pct_text.get_width() - 4, by - 1))
     # ── mute indicator ───────────────────────────────────────────────────────
     mute_label = font.render("MUTE" if muted else "M", True,
                              (200, 80, 80) if muted else (80, 80, 80))
     surface.blit(mute_label, (10, HEIGHT - mute_label.get_height() - 8))
+
 
 
 def draw_centered(surface, font, text, y, color=WHITE):
@@ -1027,10 +1116,12 @@ def main():
     snd_enemy_shoot  = pygame.mixer.Sound(os.path.join(_snd_dir, "sfx_enemy_shoot.ogg"))
     snd_explosion    = pygame.mixer.Sound(os.path.join(_snd_dir, "sfx_explosion.ogg"))
     snd_wave_start   = pygame.mixer.Sound(os.path.join(_snd_dir, "sfx_wave_start.ogg"))
+    snd_heart_pickup = pygame.mixer.Sound(os.path.join(_snd_dir, "sfx_wave_start.ogg"))
     snd_player_shoot.set_volume(0.5)
     snd_enemy_shoot.set_volume(0.4)
     snd_explosion.set_volume(0.6)
     snd_wave_start.set_volume(0.7)
+    snd_heart_pickup.set_volume(0.35)
 
     player           = None
     fleet            = None
@@ -1042,9 +1133,7 @@ def main():
     e_bullets:  list = []
     explosions: list = []
     pickups:    list = []
-    heart_chance     = 0.05   # starts at 5%, max 50%
-    shots_fired      = 0
-    shots_hit        = 0
+    HEART_DROP_RATE  = 0.08
     muted            = False
     score            = 0
     current_wave     = 0
@@ -1059,7 +1148,7 @@ def main():
     PAUSE_ITEMS      = ["RESUME", "QUIT"]
 
     def start_game():
-        nonlocal player, fleet, boss, boss_minions, boss_timer, boss_death_queue, p_bullets, e_bullets, explosions, pickups, heart_chance, shots_fired, shots_hit, score, current_wave, wave_timer
+        nonlocal player, fleet, boss, boss_minions, boss_timer, boss_death_queue, p_bullets, e_bullets, explosions, pickups, score, current_wave, wave_timer
         player       = Player(sprites)
         fleet        = None
         boss             = None
@@ -1070,9 +1159,6 @@ def main():
         e_bullets    = []
         explosions   = []
         pickups      = []
-        heart_chance = 0.05
-        shots_fired  = 0
-        shots_hit    = 0
         score        = 0
         current_wave = 0
         wave_timer   = WAVE_INTRO_DURATION
@@ -1093,6 +1179,7 @@ def main():
         bg.update()
 
         # ── Events ──────────────────────────────────────────────────────────
+        fire_pressed = None
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -1136,11 +1223,8 @@ def main():
                         pause_sel  = 0
                         prev_state = "playing"
                         STATE      = "paused"
-                    elif event.key == pygame.K_SPACE:
-                        b = player.shoot()
-                        if b:
-                            p_bullets.append(b)
-                            if not muted: snd_player_shoot.play()
+                    elif event.key in (pygame.K_z, pygame.K_x):
+                        fire_pressed = event.key
                 elif STATE == "paused":
                     if event.key == pygame.K_ESCAPE:
                         STATE = prev_state
@@ -1162,12 +1246,8 @@ def main():
                         pause_sel  = 0
                         prev_state = "boss"
                         STATE      = "paused"
-                    elif event.key == pygame.K_SPACE:
-                        b = player.shoot()
-                        if b:
-                            p_bullets.append(b)
-                            shots_fired += 1
-                            if not muted: snd_player_shoot.play()
+                    elif event.key in (pygame.K_z, pygame.K_x):
+                        fire_pressed = event.key
                 elif STATE in ("game_over", "win"):
                     if event.key == pygame.K_r:
                         menu_sel = 0
@@ -1200,8 +1280,7 @@ def main():
                     pickups.remove(pk)
                     if pk.kind == "heart":
                         player.lives = min(player.lives + 1, 7)
-                    else:
-                        heart_chance = min(heart_chance + 0.01, 0.50)
+                        if not muted: snd_heart_pickup.play()
             pickups = [pk for pk in pickups if not pk.off_screen()]
             for ex in explosions: ex.update()
             explosions = [ex for ex in explosions if not ex.done]
@@ -1219,14 +1298,10 @@ def main():
 
         elif STATE == "playing":
             keys = pygame.key.get_pressed()
-            player.update(keys)
-
-            if keys[pygame.K_SPACE]:
-                b = player.shoot()
-                if b:
-                    p_bullets.append(b)
-                    shots_fired += 1
-                    if not muted: snd_player_shoot.play()
+            fired = player.update(keys, fire_pressed)
+            for b in fired:
+                p_bullets.append(b)
+                if not muted: snd_player_shoot.play()
 
             for b  in p_bullets:  b.update()
             for b  in e_bullets:  b.update()
@@ -1245,21 +1320,25 @@ def main():
             for b in p_bullets[:]:
                 for e in fleet.alive_enemies():
                     if b.rect().colliderect(e.rect()):
-                        e.alive = False
                         p_bullets.remove(b)
-                        score += 10
-                        shots_hit += 1
-                        explosions.append(Explosion(e.x, e.y, sprites))
-                        if not muted: snd_explosion.play()
-                        # clover rate = hit_ratio/3; heart rate = heart_chance
-                        ratio = shots_hit / shots_fired if shots_fired else 0.0
-                        clover_rate = ratio / 4.0
-                        roll = random.random()
-                        if roll < clover_rate:
-                            pickups.append(Pickup(e.x, e.y, "clover", sprites))
-                        elif roll < clover_rate + heart_chance:
-                            pickups.append(Pickup(e.x, e.y, "heart", sprites))
+                        if e.hit():
+                            score += 10
+                            explosions.append(Explosion(e.x, e.y, sprites))
+                            if not muted: snd_explosion.play()
+                            if random.random() < HEART_DROP_RATE:
+                                pickups.append(Pickup(e.x, e.y, "heart", sprites))
                         break
+
+            # Explosions vs enemies
+            for ex in explosions:
+                for e in fleet.alive_enemies():
+                    if e.rect().colliderect(ex.rect()):
+                        if e.hit():
+                            score += 10
+                            explosions.append(Explosion(e.x, e.y, sprites))
+                            if not muted: snd_explosion.play()
+                            if random.random() < HEART_DROP_RATE:
+                                pickups.append(Pickup(e.x, e.y, "heart", sprites))
 
             # Enemy bullets vs player (no collision while invincible)
             if player.invincible == 0:
@@ -1286,8 +1365,7 @@ def main():
                     pickups.remove(pk)
                     if pk.kind == "heart":
                         player.lives = min(player.lives + 1, 7)
-                    else:  # clover
-                        heart_chance = min(heart_chance + 0.01, 0.50)
+                        if not muted: snd_heart_pickup.play()
             pickups = [pk for pk in pickups if not pk.off_screen()]
 
             # Enemy reaches bottom of screen → lose one life, enemy silently removed
@@ -1305,7 +1383,6 @@ def main():
                 STATE              = "wave_clear"
                 player.facing      = "default"
                 player.frame_idx   = 0
-                player.move_hold   = 0
 
         elif STATE == "boss_intro":
             keys = pygame.key.get_pressed()
@@ -1320,14 +1397,10 @@ def main():
 
         elif STATE == "boss":
             keys = pygame.key.get_pressed()
-            player.update(keys)
-
-            if keys[pygame.K_SPACE]:
-                b = player.shoot()
-                if b:
-                    p_bullets.append(b)
-                    shots_fired += 1
-                    if not muted: snd_player_shoot.play()
+            fired = player.update(keys, fire_pressed)
+            for b in fired:
+                p_bullets.append(b)
+                if not muted: snd_player_shoot.play()
 
             for b  in p_bullets:  b.update()
             for b  in e_bullets:  b.update()
@@ -1377,16 +1450,10 @@ def main():
             for b in p_bullets[:]:
                 if b.rect().colliderect(boss.rect()):
                     p_bullets.remove(b)
-                    shots_hit += 1
                     score += 50
                     boss.hit()
                     if not muted: snd_explosion.play()
-                    ratio = shots_hit / shots_fired if shots_fired else 0.0
-                    clover_rate = ratio / 4.0
-                    roll = random.random()
-                    if roll < clover_rate:
-                        pickups.append(Pickup(boss.x, boss.y + Boss.HEIGHT // 2, "clover", sprites))
-                    elif roll < clover_rate + heart_chance:
+                    if random.random() < HEART_DROP_RATE:
                         pickups.append(Pickup(boss.x, boss.y + Boss.HEIGHT // 2, "heart", sprites))
                     break
 
@@ -1395,13 +1462,22 @@ def main():
                 for b in p_bullets[:]:
                     for e in boss_minions.alive_enemies():
                         if b.rect().colliderect(e.rect()):
-                            e.alive = False
                             p_bullets.remove(b)
-                            score += 10
-                            shots_hit += 1
-                            explosions.append(Explosion(e.x, e.y, sprites))
-                            if not muted: snd_explosion.play()
+                            if e.hit():
+                                score += 10
+                                explosions.append(Explosion(e.x, e.y, sprites))
+                                if not muted: snd_explosion.play()
                             break
+
+            # explosions vs boss minions
+            if boss_minions:
+                for ex in explosions:
+                    for e in boss_minions.alive_enemies():
+                        if e.rect().colliderect(ex.rect()):
+                            if e.hit():
+                                score += 10
+                                explosions.append(Explosion(e.x, e.y, sprites))
+                                if not muted: snd_explosion.play()
 
             # enemy bullets vs player
             if player.invincible == 0:
@@ -1434,8 +1510,7 @@ def main():
                     pickups.remove(pk)
                     if pk.kind == "heart":
                         player.lives = min(player.lives + 1, 7)
-                    else:
-                        heart_chance = min(heart_chance + 0.01, 0.50)
+                        if not muted: snd_heart_pickup.play()
             pickups = [pk for pk in pickups if not pk.off_screen()]
 
             # boss death → build 30-explosion queue and freeze
@@ -1498,7 +1573,7 @@ def main():
         elif STATE == "wave_intro":
             if player:
                 player.draw(screen)
-                draw_hud(screen, font_small, score, player, current_wave, heart_chance, muted)
+                draw_hud(screen, font_small, score, player, current_wave, muted)
             if (wave_timer // 15) % 2 == 0:
                 draw_centered(screen, font_big, WAVE_NAMES[current_wave],
                               HEIGHT // 2 - 16, CYAN)
@@ -1510,7 +1585,7 @@ def main():
             for b  in e_bullets:  b.draw(screen)
             for ex in explosions: ex.draw(screen)
             for pk in pickups:    pk.draw(screen)
-            draw_hud(screen, font_small, score, player, current_wave, heart_chance, muted)
+            draw_hud(screen, font_small, score, player, current_wave, muted)
 
         elif STATE == "boss_death":
             bg.draw(screen)
@@ -1535,18 +1610,10 @@ def main():
             for ex in explosions: ex.draw(screen)
             for pk in pickups:    pk.draw(screen)
             if boss: boss.draw_hp_bar(screen, font_small)
-            # draw lives / score / mute / heart bar (no wave name during boss)
+            # draw lives / score / mute (no wave name during boss)
             screen.blit(font_small.render(f"SCORE  {score:06d}", True, WHITE), (10, 10))
             lives_text = font_small.render("LIVES " + "♥ " * player.lives, True, RED)
-            lx = WIDTH - lives_text.get_width() - 10
-            screen.blit(lives_text, (lx, 10))
-            bar_w, bar_h = lives_text.get_width(), 6
-            bx, by = lx, 24
-            pygame.draw.rect(screen, (60, 60, 60), (bx, by, bar_w, bar_h))
-            fill_w = int(bar_w * (heart_chance - 0.05) / 0.45)
-            pygame.draw.rect(screen, (220, 40, 40), (bx, by, fill_w, bar_h))
-            pct_text = font_small.render(f"{int(heart_chance*100)}%", True, RED)
-            screen.blit(pct_text, (bx - pct_text.get_width() - 4, by - 1))
+            screen.blit(lives_text, (WIDTH - lives_text.get_width() - 10, 10))
             mute_label = font_small.render("MUTE" if muted else "M", True,
                                            (200, 80, 80) if muted else (80, 80, 80))
             screen.blit(mute_label, (10, HEIGHT - mute_label.get_height() - 8))
@@ -1562,7 +1629,7 @@ def main():
             if boss:
                 boss.draw_hp_bar(screen, font_small)
             else:
-                draw_hud(screen, font_small, score, player, current_wave, heart_chance, muted)
+                draw_hud(screen, font_small, score, player, current_wave, muted)
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 140))
             screen.blit(overlay, (0, 0))
@@ -1583,18 +1650,6 @@ def main():
             draw_centered(screen, font_small, f"SCORE  {score:06d}", HEIGHT // 2 + 10)
             draw_centered(screen, font_small, "press R for menu",     HEIGHT // 2 + 40, CYAN)
 
-        # ── accuracy bar (all in-game states) ───────────────────────────────
-        if STATE in ("playing", "wave_intro", "wave_clear", "boss_intro", "boss", "boss_death", "paused", "game_over", "win"):
-            ratio    = shots_hit / shots_fired if shots_fired else 0.0
-            bar_w    = 200
-            bar_h    = 8
-            bx       = (WIDTH - bar_w) // 2
-            by       = HEIGHT - bar_h - 4
-            pygame.draw.rect(screen, (30, 30, 80),   (bx, by, bar_w, bar_h))
-            pygame.draw.rect(screen, (40, 120, 220),  (bx, by, int(bar_w * ratio), bar_h))
-            pygame.draw.rect(screen, (80, 160, 255),  (bx, by, bar_w, bar_h), 1)
-            pct = font_small.render(f"{int(ratio*100)}%", True, (80, 160, 255))
-            screen.blit(pct, (bx + bar_w + 4, by - 1))
 
         # ── screen shake ────────────────────────────────────────────────────
         if shake_timer > 0:
