@@ -264,7 +264,7 @@ def load_sprites():
         "e_sml":  SpriteSheet(p("enemy-small.png"),   16, 16, scale=2),
         "bolt":   SpriteSheet(p("laser-bolts.png"),   16, 16, scale=1),
         "expl":   SpriteSheet(p("explosion.png"),     16, 16, scale=3),
-        "heart":  SpriteSheet(p("heart.png"),         16, 16, scale=2),
+        "heart":  SpriteSheet(p("power-up.png"),       16, 16, scale=2),
         "boss":   SpriteSheet(p("enemy-big.png"),     32, 32, scale=3),
     }
 
@@ -377,7 +377,7 @@ class Player:
                     self.salvo_charge   = 0
                     self.salvo_cooldown = 45
                     spd = 8
-                    angles = [-77 + i * 22 for i in range(8)]
+                    angles = [-50 + i * (100 / 7) for i in range(8)]
                     burst = [(math.sin(math.radians(a)) * spd,
                               -math.cos(math.radians(a)) * spd) for a in angles]
                     for delay in (0, 4, 8):
@@ -416,6 +416,8 @@ class Player:
             self.lives -= 1
             self.invincible    = 90
             self.hit_explosion = Explosion(self.x, self.y, self.sprites)
+            self.salvo_charge  = 0
+            self.salvo_queue   = []
             return True
         return False
 
@@ -1006,44 +1008,41 @@ class Boss:
 
 # ── Background ────────────────────────────────────────────────────────────────
 class ParallaxBackground:
-    SKY_COLOR   = (20, 24, 60)  # dark navy
-    BG_SPEED    = 0.5           # px/frame — opaque clouds (slow)
-    CLOUD_SPEED = 1.4           # px/frame — transparent clouds (fast)
+
+
+    BG_SPEED    = 0.4
+    CLOUD_SPEED = 1.4
 
     def __init__(self):
         _base = os.path.join(os.path.dirname(__file__), "Assets", "Desert", "backgrounds")
 
-        def load_scaled(name, alpha=False):
-            raw = pygame.image.load(os.path.join(_base, name))
+        def load_scaled(path, alpha=False):
+            raw = pygame.image.load(path)
             raw = raw.convert_alpha() if alpha else raw.convert()
             iw, ih = raw.get_size()
             nh = int(ih * WIDTH / iw)
             return pygame.transform.scale(raw, (WIDTH, nh))
 
-        self.bg       = load_scaled("clouds.png")
-        self.fg       = load_scaled("clouds-transparent.png", alpha=True)
-        self.bg_h     = self.bg.get_height()
-        self.fg_h     = self.fg.get_height()
-        self.bg_y     = 0.0
-        self.fg_y     = 0.0
-        self._overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        self._overlay.fill((0, 0, 0, 120))
+        self.bg      = load_scaled(os.path.join(_base, "desert-backgorund.png"))
+        self.clouds  = load_scaled(os.path.join(_base, "clouds-transparent.png"), alpha=True)
+        self.bg_h    = self.bg.get_height()
+        self.cloud_h = self.clouds.get_height()
+        self.bg_y    = 0.0
+        self.cloud_y = 0.0
 
     def update(self):
-        self.bg_y = (self.bg_y + self.BG_SPEED)    % self.bg_h
-        self.fg_y = (self.fg_y + self.CLOUD_SPEED) % self.fg_h
+        self.bg_y    = (self.bg_y    + self.BG_SPEED)    % self.bg_h
+        self.cloud_y = (self.cloud_y + self.CLOUD_SPEED) % self.cloud_h
 
     def draw(self, surface):
-        surface.fill(self.SKY_COLOR)
         y = int(self.bg_y) - self.bg_h
         while y < HEIGHT:
             surface.blit(self.bg, (0, y))
             y += self.bg_h
-        y = int(self.fg_y) - self.fg_h
+        y = int(self.cloud_y) - self.cloud_h
         while y < HEIGHT:
-            surface.blit(self.fg, (0, y))
-            y += self.fg_h
-        surface.blit(self._overlay, (0, 0))
+            surface.blit(self.clouds, (0, y))
+            y += self.cloud_h
 
 
 # ── Pickup ────────────────────────────────────────────────────────────────────
@@ -1058,7 +1057,7 @@ class Pickup:
         self.x      = float(x)
         self.y      = float(y)
         self.kind   = kind   # "heart" or "clover"
-        self.sprite = sprites[kind].get(0)
+        self.sprite = sprites[kind].get(3)
         self.speed  = self.SPEED_HEART if kind == "heart" else self.SPEED_CLOVER
 
     def update(self):
