@@ -1,0 +1,112 @@
+[
+  {
+    "id": "left_shot",
+    "name": "LEFT SHOT",
+    "category": "shoot",
+    "cycle_time": 20,
+    "energy": 0,
+    "effect": "burst",
+    "params": { "offset_x": -11, "offset_y": -20, "vy": -8, "delay": 18 },
+    "droppable": true
+  },
+  {
+    "id": "right_shot",
+    "name": "RIGHT SHOT",
+    "category": "shoot",
+    "cycle_time": 20,
+    "energy": 0,
+    "effect": "burst",
+    "params": { "offset_x": 11, "offset_y": -20, "vy": -8, "delay": 18 },
+    "droppable": true
+  },
+  {
+    "id": "double_shot",
+    "name": "DOUBLE SHOT",
+    "category": "shoot",
+    "cycle_time": 22,
+    "energy": -1,
+    "effect": "bullet_pair",
+    "params": { "spread": 11, "offset_y": -20, "vy": -8 },
+    "droppable": true
+  },
+  {
+    "id": "spread_shot",
+    "name": "SPREAD SHOT",
+    "category": "shoot",
+    "cycle_time": 40,
+    "energy": -2,
+    "effect": "spread",
+    "params": { "offset_y": -20, "count": 5, "angle_deg": 60, "speed": 8 },
+    "droppable": true
+  },
+  {
+    "id": "rapid_shot",
+    "name": "RAPID SHOT",
+    "category": "shoot",
+    "cycle_time": 10,
+    "energy": -1,
+    "effect": "bullet",
+    "params": { "offset_x": 0, "offset_y": -20, "vy": -10 },
+    "droppable": true
+  },
+  {
+    "id": "heal",
+    "name": "HEAL",
+    "category": "heal",
+    "cycle_time": 100,
+    "energy": 0,
+    "effect": "heal",
+    "params": { "amount": 1 },
+    "droppable": true
+  },
+  {
+    "id": "big_heal",
+    "name": "BIG HEAL",
+    "category": "heal",
+    "cycle_time": 200,
+    "energy": -2,
+    "effect": "heal",
+    "params": { "amount": 3 },
+    "droppable": true
+  },
+  {
+    "id": "energy_cell",
+    "name": "ENERGY CELL",
+    "category": "energy",
+    "cycle_time": 60,
+    "energy": 2,
+    "effect": "passive",
+    "params": {},
+    "droppable": true
+  },
+  {
+    "id": "energy_burst",
+    "name": "ENERGY BURST",
+    "category": "energy",
+    "cycle_time": 1,
+    "energy": 4,
+    "effect": "passive",
+    "params": {},
+    "droppable": true
+  },
+  {
+    "id": "side_shot",
+    "name": "SIDE SHOT",
+    "category": "shoot",
+    "cycle_time": 30,
+    "energy": -1,
+    "effect": "side_bullets",
+    "params": { "offset_y": -10, "vx": 6, "vy": 0 },
+    "droppable": true
+  },
+  {
+    "id": "rear_shot",
+    "name": "REAR SHOT",
+    "category": "shoot",
+    "cycle_time": 25,
+    "energy": -1,
+    "effect": "bullet",
+    "params": { "offset_x": 0, "offset_y": 10, "vy": 6 },
+    "droppable": true
+  }
+]

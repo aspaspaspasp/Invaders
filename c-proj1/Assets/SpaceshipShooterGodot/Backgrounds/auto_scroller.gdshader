@@ -5,5 +5,5 @@ uniform float speed_scale = 0.02;
 
 void fragment(){
 	vec2 move = direction * TIME * speed_scale;
-	COLOR = texture(TEXTURE, UV + move);
+	COLOR = texture(TEXTURE, fract(UV + move));
 }

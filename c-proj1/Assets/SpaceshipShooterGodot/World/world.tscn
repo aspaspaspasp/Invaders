@@ -1,71 +1,76 @@
-[gd_scene load_steps=9 format=3 uid="uid://dyvfhgc132j2m"]
+[gd_scene format=3 uid="uid://dyvfhgc132j2m"]
 
-[ext_resource type="Shader" path="res://Backgrounds/auto_scroller.gdshader" id="1_k8mgq"]
+[ext_resource type="Shader" uid="uid://7ai2hlvd256x" path="res://Backgrounds/auto_scroller.gdshader" id="1_k8mgq"]
 [ext_resource type="Texture2D" uid="uid://dfrxi0nn6dfbf" path="res://Backgrounds/Desert/desert-backgorund.png" id="2_r3gcs"]
 [ext_resource type="Texture2D" uid="uid://rbji7aslwmkc" path="res://Backgrounds/Desert/clouds.png" id="3_lf5ox"]
-[ext_resource type="Script" path="res://World/TextureClouds.gd" id="4_nk7aq"]
+[ext_resource type="Script" uid="uid://dkcy7v0dlentd" path="res://World/TextureClouds.gd" id="4_nk7aq"]
 [ext_resource type="AudioStream" uid="uid://cbhwfj02kukm0" path="res://Music/spaceship shooter .ogg" id="5_o41ba"]
-[ext_resource type="PackedScene" uid="uid://jogyu6amdofk" path="res://Player/player.tscn" id="5_wbj7t"]
-[ext_resource type="PackedScene" uid="uid://bwodlfhu0ts4e" path="res://Enemies/enemy_ship_small.tscn" id="7_flyil"]
+[ext_resource type="AudioStream" uid="uid://bsbwlbp1xfdvx" path="res://SFX/sfx_player_shoot.ogg" id="6_pshoot"]
+[ext_resource type="AudioStream" uid="uid://bp78p7a8j0if0" path="res://SFX/sfx_enemy_shoot.ogg" id="7_eshoot"]
+[ext_resource type="AudioStream" uid="uid://b0bxdxwsv5h84" path="res://SFX/sfx_explosion.ogg" id="8_expl"]
+[ext_resource type="AudioStream" uid="uid://4ogflwqqa6t0" path="res://SFX/sfx_wave_start.ogg" id="9_wave"]
+[ext_resource type="Script" uid="uid://db3wsdxqsy3su" path="res://World/game.gd" id="10_game"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_wo432"]
 shader = ExtResource("1_k8mgq")
 shader_parameter/direction = Vector2(0, -5)
 shader_parameter/speed_scale = 0.02
 
-[node name="World" type="Node2D"]
+[node name="World" type="Node2D" unique_id=1633499787]
 
-[node name="Backgrounds" type="Node2D" parent="."]
+[node name="Backgrounds" type="Node2D" parent="." unique_id=311701924]
 
-[node name="BackgroundTexture" type="TextureRect" parent="Backgrounds"]
+[node name="BackgroundTexture" type="TextureRect" parent="Backgrounds" unique_id=1606210778]
 material = SubResource("ShaderMaterial_wo432")
-offset_right = 256.0
-offset_bottom = 340.0
+offset_right = 480.0
+offset_bottom = 640.0
 texture = ExtResource("2_r3gcs")
-stretch_mode = 1
+expand_mode = 1
 
-[node name="TextureClouds" type="Sprite2D" parent="Backgrounds"]
+[node name="TextureClouds" type="Sprite2D" parent="Backgrounds" unique_id=1776523962]
 modulate = Color(1, 1, 1, 0.756863)
 texture = ExtResource("3_lf5ox")
 centered = false
 script = ExtResource("4_nk7aq")
 
-[node name="TextureClouds2" type="Sprite2D" parent="Backgrounds"]
+[node name="TextureClouds2" type="Sprite2D" parent="Backgrounds" unique_id=93214407]
 modulate = Color(1, 1, 1, 0.443137)
-position = Vector2(0, 126)
+position = Vector2(0, 200)
 texture = ExtResource("3_lf5ox")
 centered = false
 script = ExtResource("4_nk7aq")
 speed = 300.0
 
-[node name="TextureClouds3" type="Sprite2D" parent="Backgrounds"]
+[node name="TextureClouds3" type="Sprite2D" parent="Backgrounds" unique_id=309892822]
 modulate = Color(1, 1, 1, 0.443137)
-position = Vector2(0, 126)
+position = Vector2(0, 400)
 texture = ExtResource("3_lf5ox")
 centered = false
 script = ExtResource("4_nk7aq")
 speed = 140.0
 
-[node name="Enemies" type="Node2D" parent="."]
+[node name="Game" type="Node2D" parent="." unique_id=2100622389]
+script = ExtResource("10_game")
 
-[node name="EnemyShipSmall" parent="Enemies" instance=ExtResource("7_flyil")]
-position = Vector2(35, 125)
-
-[node name="EnemyShipSmall2" parent="Enemies" instance=ExtResource("7_flyil")]
-position = Vector2(203, 88)
-
-[node name="EnemyShipSmall3" parent="Enemies" instance=ExtResource("7_flyil")]
-position = Vector2(147, 320)
-
-[node name="EnemyShipSmall4" parent="Enemies" instance=ExtResource("7_flyil")]
-position = Vector2(78, 181)
-
-[node name="EnemyShipSmall5" parent="Enemies" instance=ExtResource("7_flyil")]
-position = Vector2(136, 7)
-
-[node name="Player" parent="." instance=ExtResource("5_wbj7t")]
-position = Vector2(126, 234)
-
-[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=838360875]
 stream = ExtResource("5_o41ba")
+volume_db = -6.0
 autoplay = true
+
+[node name="AudioPlayers" type="Node2D" parent="." unique_id=2138708089]
+
+[node name="PlayerShoot" type="AudioStreamPlayer" parent="AudioPlayers" unique_id=107821158]
+stream = ExtResource("6_pshoot")
+volume_db = -6.0
+
+[node name="EnemyShoot" type="AudioStreamPlayer" parent="AudioPlayers" unique_id=2098500138]
+stream = ExtResource("7_eshoot")
+volume_db = -8.0
+
+[node name="Explosion" type="AudioStreamPlayer" parent="AudioPlayers" unique_id=549231665]
+stream = ExtResource("8_expl")
+volume_db = -4.0
+
+[node name="WaveStart" type="AudioStreamPlayer" parent="AudioPlayers" unique_id=1919403650]
+stream = ExtResource("9_wave")
+volume_db = -3.0
