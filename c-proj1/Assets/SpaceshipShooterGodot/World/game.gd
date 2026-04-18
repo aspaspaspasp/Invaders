@@ -1,13 +1,22 @@
 extends Node2D
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-const W = 480
-const H = 640
+const W = 810          # shmup area width
+const H = 1080         # shmup area height
+const DRAW_SCALE = W / 480.0  # visual scale relative to original 480px design
+const TOTAL_W  = 1920  # full window width
+const TOTAL_H  = 1080  # full window height
+const PANEL_X  = 810   # right panel x origin
+const PANEL_W  = 1110  # right panel width  (TOTAL_W - W)
+const SYS_H    = 660   # systems section height (top-right)
+const BOT_H    = 420   # bottom section height  (TOTAL_H - SYS_H)
+const BOT_W    = 555   # each bottom half width (PANEL_W / 2)
 const ANIM_RATE       = 5
 const WAVE_INTRO_DUR  = 60
 const CARDS_TO_END    = 7
 const EVO_CARDS       = 5   # cards collected needed for evolution
 const CARRIER_COUNT   = 2   # enemies per spawn that carry a droppable card
+const MAX_PASSIVES    = 3   # passive card slots
 const DROP_RATE       = 0.20
 
 const WHITE    := Color(1, 1, 1)
@@ -30,26 +39,26 @@ const WAVE_NAMES := [
 
 const WAVE_CONFIGS := [
 	# 1: THE VANGUARD
-	{"movement":"D","descent_speed":0.54,"shoot_interval":36,"entry_stagger":8,"enemies":[
+	{"movement":"D","descent_speed":0.91,"shoot_interval":36,"entry_stagger":8,"enemies":[
 		[240,90,"e_sml"],[185,145,"e_sml"],[295,145,"e_sml"],
 		[130,200,"e_sml"],[240,200,"e_sml"],[350,200,"e_sml"],
 		[75,255,"e_sml"],[185,255,"e_sml"],[295,255,"e_sml"],[405,255,"e_sml"],
 		[75,310,"e_sml"],[185,310,"e_sml"],[240,310,"e_sml"],[295,310,"e_sml"],[405,310,"e_sml"]]},
 	# 2: TWIN TOWERS
-	{"movement":"D","descent_speed":0.59,"shoot_interval":28,"entry_stagger":6,"enemies":[
+	{"movement":"D","descent_speed":1.00,"shoot_interval":28,"entry_stagger":6,"enemies":[
 		[90,90,"e_med"],[90,145,"e_med"],[90,200,"e_med"],[90,255,"e_med"],[90,310,"e_med"],
 		[390,90,"e_med"],[390,145,"e_med"],[390,200,"e_med"],[390,255,"e_med"],[390,310,"e_med"],
 		[185,170,"e_sml"],[240,170,"e_sml"],[295,170,"e_sml"],
 		[155,130,"e_sml"],[325,130,"e_sml"],[155,215,"e_sml"],[325,215,"e_sml"]]},
 	# 3: THE ARMADA
-	{"movement":"D","descent_speed":0.50,"shoot_interval":20,"entry_stagger":4,"enemies":[
+	{"movement":"D","descent_speed":0.84,"shoot_interval":20,"entry_stagger":4,"enemies":[
 		[60,80,"e_big"],[120,80,"e_big"],[180,80,"e_big"],[240,80,"e_big"],[300,80,"e_big"],[360,80,"e_big"],[420,80,"e_big"],
 		[60,135,"e_med"],[120,135,"e_med"],[180,135,"e_med"],[240,135,"e_med"],[300,135,"e_med"],[360,135,"e_med"],[420,135,"e_med"],
 		[60,190,"e_sml"],[120,190,"e_sml"],[180,190,"e_sml"],[240,190,"e_sml"],[300,190,"e_sml"],[360,190,"e_sml"],[420,190,"e_sml"],
 		[90,245,"e_med"],[165,245,"e_med"],[240,245,"e_med"],[315,245,"e_med"],[390,245,"e_med"],
 		[120,300,"e_sml"],[210,300,"e_sml"],[270,300,"e_sml"],[360,300,"e_sml"]]},
 	# 4: THE DIAMOND
-	{"movement":"D","h_speed":0.0,"descent_speed":0.45,"shoot_interval":32,"entry_stagger":7,"enemies":[
+	{"movement":"D","h_speed":0.0,"descent_speed":0.76,"shoot_interval":32,"entry_stagger":7,"enemies":[
 		[240,70,"e_big"],
 		[160,120,"e_med"],[240,120,"e_med"],[320,120,"e_med"],
 		[80,175,"e_big"],[160,175,"e_med"],[240,175,"e_med"],[320,175,"e_med"],[400,175,"e_big"],
@@ -57,21 +66,21 @@ const WAVE_CONFIGS := [
 		[240,35,"e_sml"],[120,90,"e_sml"],[360,90,"e_sml"],
 		[40,175,"e_sml"],[440,175,"e_sml"],[120,260,"e_sml"],[360,260,"e_sml"],[240,320,"e_sml"]]},
 	# 5: THREE COLUMNS
-	{"movement":"D","h_speed":0.0,"descent_speed":0.50,"shoot_interval":28,"entry_stagger":5,"enemies":[
+	{"movement":"D","h_speed":0.0,"descent_speed":0.84,"shoot_interval":28,"entry_stagger":5,"enemies":[
 		[100,60,"e_sml"],[240,60,"e_med"],[380,60,"e_sml"],[100,90,"e_sml"],[240,90,"e_med"],[380,90,"e_sml"],
 		[100,120,"e_sml"],[240,120,"e_med"],[380,120,"e_sml"],[100,150,"e_sml"],[240,150,"e_med"],[380,150,"e_sml"],
 		[100,180,"e_sml"],[240,180,"e_med"],[380,180,"e_sml"],[100,210,"e_sml"],[240,210,"e_med"],[380,210,"e_sml"],
 		[100,240,"e_sml"],[240,240,"e_med"],[380,240,"e_sml"],[100,270,"e_sml"],[240,270,"e_med"],[380,270,"e_sml"],
 		[100,300,"e_sml"],[240,300,"e_med"],[380,300,"e_sml"]]},
 	# 6: THE WINGS
-	{"movement":"D","h_speed":0.0,"descent_speed":0.54,"shoot_interval":26,"entry_stagger":6,"enemies":[
+	{"movement":"D","h_speed":0.0,"descent_speed":0.91,"shoot_interval":26,"entry_stagger":6,"enemies":[
 		[45,85,"e_big"],[90,125,"e_big"],[45,165,"e_big"],[90,205,"e_big"],[45,245,"e_big"],
 		[435,85,"e_big"],[390,125,"e_big"],[435,165,"e_big"],[390,205,"e_big"],[435,245,"e_big"],
 		[240,65,"e_med"],[240,110,"e_med"],[240,155,"e_med"],[240,200,"e_med"],[240,245,"e_med"],[240,290,"e_med"],
 		[155,100,"e_sml"],[325,100,"e_sml"],[155,170,"e_sml"],[325,170,"e_sml"],
 		[155,240,"e_sml"],[325,240,"e_sml"],[155,310,"e_sml"],[325,310,"e_sml"]]},
 	# 7: THE CROSS
-	{"movement":"D","descent_speed":0.63,"shoot_interval":24,"entry_stagger":5,"enemies":[
+	{"movement":"D","descent_speed":1.06,"shoot_interval":24,"entry_stagger":5,"enemies":[
 		[240,55,"e_big"],
 		[210,100,"e_sml"],[240,100,"e_sml"],[270,100,"e_sml"],
 		[210,130,"e_sml"],[240,130,"e_sml"],[270,130,"e_sml"],
@@ -79,7 +88,7 @@ const WAVE_CONFIGS := [
 		[60,192,"e_med"],[120,192,"e_med"],[180,192,"e_med"],[240,192,"e_med"],[300,192,"e_med"],[360,192,"e_med"],[420,192,"e_med"],
 		[210,225,"e_sml"],[240,225,"e_sml"],[270,225,"e_sml"],[240,260,"e_sml"]]},
 	# 8: THE SWARM
-	{"movement":"D","descent_speed":0.68,"shoot_interval":22,"entry_stagger":4,"enemies":[
+	{"movement":"D","descent_speed":1.15,"shoot_interval":22,"entry_stagger":4,"enemies":[
 		[65,75,"e_sml"],[100,95,"e_sml"],[75,120,"e_sml"],[110,140,"e_sml"],[60,165,"e_sml"],
 		[95,185,"e_sml"],[80,210,"e_sml"],[115,225,"e_sml"],[65,250,"e_sml"],[100,265,"e_sml"],
 		[210,65,"e_sml"],[245,80,"e_sml"],[220,105,"e_sml"],[255,125,"e_sml"],[205,150,"e_sml"],
@@ -87,14 +96,14 @@ const WAVE_CONFIGS := [
 		[365,75,"e_sml"],[400,95,"e_sml"],[375,120,"e_sml"],[410,140,"e_sml"],[360,165,"e_sml"],
 		[395,185,"e_sml"],[380,210,"e_sml"],[415,225,"e_sml"],[365,250,"e_sml"],[400,265,"e_sml"]]},
 	# 9: THE PHALANX
-	{"movement":"D","h_speed":0.0,"descent_speed":0.63,"shoot_interval":20,"entry_stagger":4,"enemies":[
+	{"movement":"D","h_speed":0.0,"descent_speed":1.06,"shoot_interval":20,"entry_stagger":4,"enemies":[
 		[45,65,"e_big"],[117,65,"e_big"],[189,65,"e_big"],[261,65,"e_big"],[333,65,"e_big"],[405,65,"e_big"],
 		[45,115,"e_med"],[117,115,"e_med"],[189,115,"e_med"],[261,115,"e_med"],[333,115,"e_med"],[405,115,"e_med"],
 		[45,165,"e_big"],[117,165,"e_big"],[189,165,"e_big"],[261,165,"e_big"],[333,165,"e_big"],[405,165,"e_big"],
 		[45,215,"e_med"],[117,215,"e_med"],[189,215,"e_med"],[261,215,"e_med"],[333,215,"e_med"],[405,215,"e_med"],
 		[45,265,"e_sml"],[117,265,"e_sml"],[189,265,"e_sml"],[261,265,"e_sml"],[333,265,"e_sml"],[405,265,"e_sml"]]},
 	# 10: THE GAUNTLET
-	{"movement":"D","descent_speed":0.72,"shoot_interval":16,"entry_stagger":3,"entry_speed":2.7,"enemies":[
+	{"movement":"D","descent_speed":1.22,"shoot_interval":16,"entry_stagger":3,"entry_speed":4.56,"enemies":[
 		[60,65,"e_big"],[120,65,"e_big"],[180,65,"e_big"],[240,65,"e_big"],[300,65,"e_big"],[360,65,"e_big"],[420,65,"e_big"],
 		[60,108,"e_med"],[120,108,"e_med"],[180,108,"e_med"],[240,108,"e_med"],[300,108,"e_med"],[360,108,"e_med"],[420,108,"e_med"],
 		[60,151,"e_sml"],[120,151,"e_sml"],[180,151,"e_sml"],[240,151,"e_sml"],[300,151,"e_sml"],[360,151,"e_sml"],[420,151,"e_sml"],
@@ -108,10 +117,11 @@ const WAVE_CONFIGS := [
 const WAVE_HP := [3, 4, 5, 7, 9, 12, 15, 18, 22, 25]
 
 const CARD_DATA := [
-	{"id":"main_shot","name":"MAIN SHOT","category":"shoot","cycle_time":50,"energy":0,"effect":"main_shot","params":{"offset_y":-20,"vy":-9.7,"interval":12},"droppable":true},
-	{"id":"spread_shot","name":"FRONT SPREAD","category":"shoot","cycle_time":55,"energy":-2,"effect":"spread_front","params":{"offset_y":-20,"angle_deg":60,"speed":9.7},"droppable":true},
-	{"id":"rapid_shot","name":"HOMING SHOT","category":"shoot","cycle_time":45,"energy":-1,"effect":"homing","params":{"offset_y":-20,"speed":8.5,"steer":0.06,"spread_deg":24.0},"droppable":true},
-	{"id":"side_spread","name":"SIDE SPREAD","category":"shoot","cycle_time":55,"energy":-2,"effect":"spread_sides","params":{"angle_deg":30,"speed":9.7},"droppable":true},
+	{"id":"main_shot","name":"MAIN SHOT","category":"shoot","cycle_time":50,"energy":0,"effect":"main_shot","params":{"offset_y":-20,"vy":-16.4,"interval":12},"droppable":true},
+	{"id":"back_shot","name":"BACK SHOT","category":"shoot","cycle_time":50,"energy":-1,"effect":"back_shot","params":{"offset_y":12,"vy":16.4,"interval":12},"droppable":true},
+	{"id":"spread_shot","name":"FRONT SPREAD","category":"shoot","cycle_time":55,"energy":-2,"effect":"spread_front","params":{"offset_y":-20,"angle_deg":60,"speed":16.4},"droppable":true},
+	{"id":"rapid_shot","name":"HOMING SHOT","category":"shoot","cycle_time":45,"energy":-1,"effect":"homing","params":{"offset_y":-20,"speed":14.3,"steer":0.06,"spread_deg":24.0},"droppable":true},
+	{"id":"side_spread","name":"SIDE SPREAD","category":"shoot","cycle_time":55,"energy":-2,"effect":"spread_sides","params":{"angle_deg":30,"speed":16.4},"droppable":true},
 	{"id":"heal","name":"HEAL","category":"heal","cycle_time":100,"energy":-2,"effect":"heal","params":{},"droppable":true},
 	{"id":"energy_cell","name":"ENERGY CELL","category":"energy","cycle_time":60,"energy":2,"effect":"passive","params":{},"droppable":true},
 ]
@@ -127,8 +137,8 @@ var _snd_wave   : AudioStreamPlayer
 var _muted      := true
 
 # ── State ─────────────────────────────────────────────────────────────────────
-enum GS {MENU,WAVE_INTRO,PLAYING,CARD_SELECT,CARD_FORGE,CARD_ARRANGE,
-		 BOSS_INTRO,BOSS,BOSS_DEATH,GAME_OVER,WIN,PAUSED,CARD_OP,EVO_FLASH,CARD_REPLACE}
+enum GS {MENU,WAVE_INTRO,PLAYING,CARD_ARRANGE,
+		 BOSS_INTRO,BOSS,BOSS_DEATH,GAME_OVER,WIN,PAUSED,EVO_FLASH}
 var _st      := GS.MENU
 var _prev_st := GS.PLAYING
 
@@ -142,41 +152,24 @@ var _boss_dq      := []    # [[timer,x,y,enemies_to_kill],...]
 var _pbullets     := []
 var _ebullets     := []
 var _expls        := []
+var _ghosts       := []
 var _cdrops       := []
 var _collected    := []    # cards collected this wave
 var _card_drop_queue      : Array = []
-var _replace_card    : Dictionary = {}
-var _replace_cursor  := 0
 var _score        := 0
 var _wave         := 0
 var _wave_timer          := 0
-var _wave_carrier_slots  : Array = []
+var _wave_carrier_slots    : Array = []
+var _depleted_carrier_slots: Array = []   # slots whose card was collected this wave
 var _kills_this_spawn    := 0
 var _respawns_no_kill    := 0
 var _shake        := 0
 var _menu_sel     := 0
 var _pause_sel    := 0
 var _csel_cursor  := 0
-var _csel_chosen  := []
 var _arr_cursor        := 0
-var _arr_held                   # null or int index
 var _arr_from_playing  := false
-var _arr_focus         := 1     # 0 = card pick section, 1 = loop section
-
-# Card operation state (CARD_OP)
-var _card_op_type   := ""    # "deck_remove","deck_fuse","deck_upgrade"
-var _card_op_cursor := 0
-var _card_op_sel1   := -1    # forge: first selected loop index
-var _card_op_card   : Dictionary = {}  # the consumed manipulation card
-var _card_op_msg    := ""    # feedback message
-
-# Card forge screen state (CARD_FORGE)
-var _cforge_cursor      := 0
-var _cforge_sel1        := -1
-var _cforge_flash_timer := 0   # 60→0, blink result card for 1s
-var _cforge_result_idx  := 0   # loop index of the merged card
-var _cforge_result      : Dictionary = {}
-var _cforge_msg         := ""
+var _arr_focus         := 1     # 0 = card pick section, 1 = weapons section
 
 var _droppable_cards  : Array = []
 var _evo_kills        := 0      # 0–25
@@ -223,7 +216,7 @@ class BulletData:
 
 # ── Inner class: EnemyData ────────────────────────────────────────────────────
 class EnemyData:
-	const ENTRY_SPEED := 3.0
+	const ENTRY_SPEED := 5.1
 	const MAX_HP      := {"e_sml":2,"e_med":3,"e_big":5}
 	const N_FRAMES    := {"e_sml":2,"e_med":4,"e_big":2}
 	const FLASH_DUR   := 12
@@ -244,8 +237,10 @@ class EnemyData:
 	var patrol_x    : float
 	var patrol_range:= 55.0
 	var patrol_dx   := 1.0
-	var carries_card:= false
-	var charging    := false
+	var carries_card  := false
+	var card_depleted := false   # card from this slot was already collected
+	var slot_idx      := -1      # formation index (set by _make_fleet)
+	var charging      := false
 
 	func init(tx:float,ty:float,k:String,ed:int) -> void:
 		target_x=tx; target_y=ty; key=k
@@ -302,9 +297,9 @@ class FleetData:
 		sine_amplitude = float(cfg.get("sine_amplitude",60))
 		sine_frequency = float(cfg.get("sine_frequency",0.02))
 		descent_speed  = float(cfg.get("descent_speed",0.4))
-		anchor_dx      = float(cfg.get("h_speed",1.0))
+		anchor_dx      = float(cfg.get("h_speed",1.69))
 		var patrol_range = float(cfg.get("patrol_range",55))
-		var h_speed      = float(cfg.get("h_speed",1.0))
+		var h_speed      = float(cfg.get("h_speed",1.69))
 		var stagger      = int(cfg.get("entry_stagger",8))
 		var esp          = float(cfg.get("entry_speed",EnemyData.ENTRY_SPEED))
 
@@ -424,7 +419,7 @@ class FleetData:
 		var still_pending = []
 		for entry in pending_shots:
 			if tick >= entry[0]:
-				var b = BulletData.new(); b.init(entry[1], entry[2], 0, 4.8, "enemy")
+				var b = BulletData.new(); b.init(entry[1], entry[2], 0, 8.1, "enemy")
 				out_bullets.append(b)
 			else:
 				still_pending.append(entry)
@@ -436,20 +431,20 @@ class FleetData:
 				var shooter = living[randi() % living.size()]
 				var sx = shooter.x; var sy = shooter.y + 10
 				if shooter.key == "e_sml":
-					var b = BulletData.new(); b.init(sx, sy, 0, 4.8, "enemy"); out_bullets.append(b)
+					var b = BulletData.new(); b.init(sx, sy, 0, 8.1, "enemy"); out_bullets.append(b)
 				elif shooter.key == "e_med":
-					for vx in [-2.4, 0.0, 2.4]:
-						var b = BulletData.new(); b.init(sx, sy, vx, 4.8, "enemy"); out_bullets.append(b)
+					for vx in [-4.05, 0.0, 4.05]:
+						var b = BulletData.new(); b.init(sx, sy, vx, 8.1, "enemy"); out_bullets.append(b)
 				else:  # e_big burst
 					for i in range(3):
 						pending_shots.append([tick + i*8, sx, sy])
 
 # ── Inner class: PlayerData ───────────────────────────────────────────────────
 class PlayerData:
-	const SPEED         := 4.4
+	const SPEED         := 7.4
 	const SHOOT_CD      := 3
 	const SHIP_FRAMES   := {"default":[2,7],"left":[0,5],"right":[4,9]}
-	const DASH_SPEED    := 13.0
+	const DASH_SPEED    := 21.9
 	const DASH_FRAMES   := 10
 	const DASH_CD_MAX   := 50
 
@@ -463,19 +458,16 @@ class PlayerData:
 	var tick       := 0
 	var fi         := 0
 	var cooldown   := 0
-	const MAX_LOOP := 5
-	var loop       : Array  # Array of card dicts (shoot only)
-	var passives   : Array  # Array of passive cards (heal/energy, max 2)
-	var loop_idx   := 0
-	var loop_timer := 0
-	var loop_flash := 0
-	var loop_flash_idx := -1
+	var primary    : Dictionary = {}  # active primary weapon card (shoot only)
+	var secondary  : Dictionary = {}  # active secondary weapon card (shoot only)
+	var tertiary   : Dictionary = {}  # active tertiary weapon card (shoot only)
+	var active_weapon  := 0           # 0=primary  1=secondary  2=tertiary
+	var weapon_timer   := 0
+	var weapon_flash   := 0
+	var passives   : Array  # Array of passive cards (heal/energy, max 3)
 	var max_energy := 10
 	var energy_pool:= 10
 	var pending_bullets: Array = []  # [[frames_left,ox,oy,vy,vx],...]
-	var salvo_charge   := 0
-	var salvo_cd       := 0
-	var salvo_queue    : Array = []   # [[delay,[(vx,vy),...]],...]
 	var vel_x := 0.0
 	var vel_y := 0.0
 	var hit_expl_timer := 0  # frames remaining for hit explosion
@@ -496,17 +488,17 @@ class PlayerData:
 		x = _W / 2.0; y = _H - 60.0
 		base_max_lives=3; max_lives=3; lives=3.0; invincible=0
 		facing="default"; tick=0; fi=0; cooldown=0
-		loop=[]; passives=[]; loop_idx=0; loop_timer=0; loop_flash=0; loop_flash_idx=-1
+		primary={}; secondary={}; tertiary={}; active_weapon=0; weapon_timer=0; weapon_flash=0; passives=[]
 		max_energy=10; energy_pool=10
 		heal_events=[]; muzzle_events=[]
-		pending_bullets=[]; salvo_charge=0; salvo_cd=0; salvo_queue=[]
+		pending_bullets=[]
 		vel_x=0.0; vel_y=0.0
 		hit_expl_timer=0
 		dash_timer=0; dash_vx=0.0; dash_cd=0; dash_trail=[]
 
 	func recalc_max_lives() -> void:
 		var bonus := 0
-		for c in loop + passives:
+		for c in passives:
 			if c.get("effect","") == "heal":
 				var lvl = c.get("level", 1)
 				if lvl == 2: bonus += 1
@@ -518,7 +510,7 @@ class PlayerData:
 			lives = min(lives, float(new_max))
 		max_lives = new_max
 
-	func update(fire_left:bool, fire_right:bool) -> Array:
+	func update() -> Array:
 		var bullets: Array = []
 		var exploding = hit_expl_timer > 0
 
@@ -537,8 +529,8 @@ class PlayerData:
 			if dash_timer == 0:
 				dash_cd = DASH_CD_MAX
 		else:
-			# Space triggers dash in held direction
-			if Input.is_action_just_pressed("salvo") and dash_cd == 0:
+			# E triggers dash in held direction
+			if Input.is_action_just_pressed("dash") and dash_cd == 0:
 				var dir := 0.0
 				if Input.is_action_pressed("move_left"):  dir = -1.0
 				elif Input.is_action_pressed("move_right"): dir = 1.0
@@ -568,63 +560,26 @@ class PlayerData:
 
 		# timers
 		if cooldown > 0: cooldown -= 1
-		if salvo_cd  > 0: salvo_cd  -= 1
-
-		# process salvo queue
-		var nq = []
-		for entry in salvo_queue:
-			if entry[0] <= 0:
-				for vxy in entry[1]:
-					var b = BulletData.new(); b.init(x, y-20, vxy[0], vxy[1], "player")
-					bullets.append(b)
-			else:
-				nq.append([entry[0]-1, entry[1]])
-		salvo_queue = nq
-
-		if not exploding and dash_timer == 0:
-			if Input.is_action_pressed("salvo"):
-				salvo_charge += 1
-				if salvo_charge >= 60 and salvo_cd == 0:
-					salvo_charge=0; salvo_cd=45
-					var spd = 8.0
-					var vecs = []
-					for i in range(8):
-						var a = deg_to_rad(-50.0 + i*(100.0/7.0))
-						vecs.append([sin(a)*spd, -cos(a)*spd])
-					for delay in [0,4,8]:
-						salvo_queue.append([delay, vecs])
-			else:
-				salvo_charge = 0
-				if fire_left and cooldown == 0:
-					cooldown = SHOOT_CD
-					var b = BulletData.new(); b.init(x-11, y-20, 0, -8, "player"); bullets.append(b)
-				elif fire_right and cooldown == 0:
-					cooldown = SHOOT_CD
-					var b = BulletData.new(); b.init(x+11, y-20, 0, -8, "player"); bullets.append(b)
-
-		# card loop
-		if loop.size() > 0 and not exploding:
-			loop_timer += 1
-			var card = loop[loop_idx]
-			if loop_timer >= effective_cycle(card):
-				loop_timer = 0
-				var cost = card["energy"]
-				if card["effect"] == "passive":
-					cost = card.get("level", 1) + 1  # 2 / 3 / 4
-				elif card["effect"] == "main_shot":
-					cost = -(card.get("level", 1) - 1)  # I=0  II=-1  III=-2
-				if card["effect"] == "main_shot" and cost < 0 and energy_pool + cost < 0:
-					# Energy starved: fall back to level I (free)
-					var fallback = card.duplicate()
-					fallback["level"] = 1
+		# active weapon fires while Q is held
+		var _active_wpn = [primary, secondary, tertiary][active_weapon]
+		if not _active_wpn.is_empty() and not exploding:
+			weapon_timer += 1
+			weapon_timer = min(weapon_timer, effective_cycle(_active_wpn))
+			if weapon_timer >= effective_cycle(_active_wpn) and Input.is_action_pressed("fire"):
+				weapon_timer = 0
+				var cost = _active_wpn["energy"] as int
+				if _active_wpn["effect"] == "main_shot":
+					cost = -(_active_wpn.get("level", 1) - 1)
+				if _active_wpn["effect"] == "spread_front":
+					cost = -(_active_wpn.get("level", 1) - 1)
+				if _active_wpn["effect"] == "main_shot" and cost < 0 and energy_pool + cost < 0:
+					var fallback = _active_wpn.duplicate(); fallback["level"] = 1
 					_activate_card(fallback, bullets)
 				elif cost >= 0 or energy_pool + cost >= 0:
-					_activate_card(card, bullets)
+					_activate_card(_active_wpn, bullets)
 					energy_pool = clamp(energy_pool + cost, 0, max_energy)
-				loop_flash_idx = loop_idx
-				loop_flash     = 18
-				loop_idx = (loop_idx+1) % loop.size()
-		if loop_flash > 0: loop_flash -= 1
+				weapon_flash = 18
+		if weapon_flash > 0: weapon_flash -= 1
 
 		# passive cards tick independently
 		for pc in passives:
@@ -761,6 +716,15 @@ class PlayerData:
 					for i in range(1, count_m):
 						pending_bullets.append([i * interval_m, side, oy_m, vy_m, 0.0])
 					muzzle_events.append({"x":x+side,"y":y+oy_m,"scale":0.8,"category":cat})
+			"back_shot":
+				var oy_b     = float(p["offset_y"]); var vy_b = float(p["vy"])
+				var count_b  = ([3, 7, 10])[card.get("level", 1) - 1]
+				var interval_b = ([12, 8, 4])[card.get("level", 1) - 1]
+				for side in [-11.0, 11.0]:
+					var b0 = BulletData.new(); b0.init(x+side, y+oy_b, 0.0, vy_b, "player"); bullets.append(b0)
+					for i in range(1, count_b):
+						pending_bullets.append([i * interval_b, side, oy_b, vy_b, 0.0])
+					muzzle_events.append({"x":x+side,"y":y+oy_b,"scale":0.8,"category":cat})
 			"burst_column":
 				var ox       = float(p["offset_x"]); var oy = float(p["offset_y"])
 				var vy       = float(p["vy"]);        var vx = float(p.get("vx", 0.0))
@@ -779,7 +743,6 @@ class PlayerData:
 			invincible      = 90
 			hit_expl_timer  = 25
 			hit_expl_x      = x; hit_expl_y = y; hit_expl_fi = 0
-			salvo_charge    = 0; salvo_queue = []
 			return true
 		return false
 
@@ -798,44 +761,83 @@ class PlayerData:
 		return base
 
 	func energy_net() -> int:
-		var total = loop.reduce(func(a, c):
-			var e = c["energy"]
-			if c["effect"] == "passive": e = c.get("level", 1) + 1
-			elif c["effect"] == "main_shot": e = -(c.get("level", 1) - 1)
-			return a + e
-		, 0)
+		var total = 0
+		for weapon in [primary, secondary, tertiary]:
+			if not weapon.is_empty():
+				var e = weapon["energy"] as int
+				if weapon["effect"] == "main_shot": e = -(weapon.get("level",1) - 1)
+				if weapon["effect"] == "spread_front": e = -(weapon.get("level",1) - 1)
+				total += e
 		for p in passives:
 			if p.get("effect","") == "passive": total += p.get("level",1) + 1
 		return total
 
 	func is_starved() -> bool:
-		if loop.is_empty(): return false
-		var card = loop[loop_idx]
-		if card["effect"] == "main_shot": return false  # always fires at minimum level I
-		return card["energy"] < 0 and energy_pool + card["energy"] < 0
+		var weapon = [primary, secondary, tertiary][active_weapon]
+		if weapon.is_empty(): return false
+		if weapon["effect"] in ["main_shot", "back_shot"]: return false
+		var _cost = weapon["energy"] as int
+		if weapon["effect"] == "spread_front": _cost = -(weapon.get("level",1) - 1)
+		return _cost < 0 and energy_pool + _cost < 0
 
 # ── Inner class: ExplosionData ────────────────────────────────────────────────
 class ExplosionData:
 	var x: float; var y: float
+	var scale := 3.0
 	var tick := 0; var fi := 0; var done := false
 
-	func init(px:float,py:float) -> void: x=px; y=py
+	func init(px:float,py:float,sc:float=3.0) -> void: x=px; y=py; scale=sc
 
 	func update() -> void:
 		tick += 1
 		if tick >= 5: tick=0; fi+=1
 		if fi >= 5: done=true
 
+# ── Inner class: GhostData ────────────────────────────────────────────────────
+class GhostData:
+	const SPEED  := 6.0
+	const HALF_W := 7.0
+	const HALF_H := 7.0
+
+	var x                  : float
+	var y                  : float
+	var vx                 : float = 0.0
+	var vy                 : float = 0.0
+	var alive              := true
+	var track_budget       : float = 0.0   # distance left in tracking mode
+
+	func init(px:float, py:float, player_x:float, player_y:float) -> void:
+		x = px; y = py
+		var dx = player_x - px; var dy = player_y - py
+		var dist = sqrt(dx*dx + dy*dy)
+		track_budget = dist * 0.5   # track for half the spawn distance, then fly straight
+
+	func update(px:float, py:float) -> void:
+		if track_budget > 0.0:
+			var dx = px - x; var dy = py - y
+			var dist = sqrt(dx*dx + dy*dy)
+			if dist > 0.1:
+				vx = (dx / dist) * SPEED
+				vy = (dy / dist) * SPEED
+			track_budget -= SPEED
+		x += vx; y += vy
+
+	func rect() -> Rect2:
+		return Rect2(x - HALF_W, y - HALF_H, HALF_W*2, HALF_H*2)
+
+	func hit_rect() -> Rect2:
+		return Rect2(x - HALF_W*0.7, y - HALF_H*0.7, HALF_W*1.4, HALF_H*1.4)
+
 # ── Inner class: BossData ─────────────────────────────────────────────────────
 class BossData:
-	const W_CONST    := 480
-	const H_CONST    := 640
+	const W_CONST    := 810
+	const H_CONST    := 1080
 	const MAX_HP     := 450
 	const SINE_P     := {1:[120.0,0.008],2:[150.0,0.014],3:[150.0,0.020]}
 	const SPREAD_INT := {1:60,2:47,3:33}
 	const AIMED_INT  := 40
 	const RING_INT   := 80
-	const BSPD       := 4.8
+	const BSPD       := 8.1
 
 	var x          := float(W_CONST)/2.0
 	var y          := float(96/2+20)
@@ -955,14 +957,15 @@ class CardDropData:
 	const MAX_VX   := 2.0
 	const MAX_TILT := 0.35
 
-	var x        : float
-	var y        : float
-	var vx       : float = 0.0
-	var rotation : float = 0.0
-	var card     : Dictionary
+	var x         : float
+	var y         : float
+	var vx        : float = 0.0
+	var rotation  : float = 0.0
+	var card      : Dictionary
+	var from_slot : int   = -1
 
-	func init(px:float, py:float, c:Dictionary) -> void:
-		x = px; y = py; card = c
+	func init(px:float, py:float, c:Dictionary, slot:int=-1) -> void:
+		x = px; y = py; card = c; from_slot = slot
 
 	func update() -> void:
 		vx *= FRICTION
@@ -973,7 +976,7 @@ class CardDropData:
 	func nudge() -> void:
 		vx = clamp(vx + randf_range(-0.8, 0.8), -MAX_VX, MAX_VX)
 
-	func off_screen() -> bool: return y - H_D > H
+	func off_screen() -> bool: return y > H - 60.0 or y < -10 or x < -10 or x > W + 10
 
 	func rect() -> Rect2:
 		return Rect2(x - W_D/2, y - H_D/2, W_D, H_D)
@@ -1054,12 +1057,12 @@ func _random_card() -> Dictionary:
 	return c
 
 func _generate_card_drop_queue() -> void:
-	var shoot_ids = ["main_shot","spread_shot","rapid_shot","side_spread"]
+	var shoot_ids = ["main_shot","back_shot","spread_shot","rapid_shot","side_spread"]
 	# collect unique shoot ids the player already owns
 	var owned_shoot: Array = []
-	for c in _player.loop:
-		if c["category"] == "shoot" and not owned_shoot.has(c["id"]):
-			owned_shoot.append(c["id"])
+	for w in [_player.primary, _player.secondary, _player.tertiary]:
+		if not w.is_empty() and w.get("category","") == "shoot" and not owned_shoot.has(w["id"]):
+			owned_shoot.append(w["id"])
 	# pick 3 distinct shoot cards — at least 1 must be owned
 	var picks: Array = []
 	if not owned_shoot.is_empty():
@@ -1071,26 +1074,79 @@ func _generate_card_drop_queue() -> void:
 		if picks.size() >= 3: break
 		picks.append(id)
 	picks.shuffle()
-	# build queue: 2 shoot (owned preferred + 1 other) + 1 heal + 1 energy + 1 shoot, shuffled
-	var queue = [_make_card(picks[0]), _make_card(picks[1] if picks.size() > 1 else picks[0]), _make_card("heal"), _make_card("energy_cell"), _make_card(picks[2] if picks.size() > 2 else picks[0])]
+	# determine which passives can still be offered
+	var passives_full = _player.passives.size() >= MAX_PASSIVES
+	var _passive_max_level = func(cat: String) -> bool:
+		for p in _player.passives:
+			if p["category"] == cat and p.get("level",1) >= 3:
+				return true
+		return false
+	var offer_heal        = not (passives_full and _passive_max_level.call("heal"))
+	var offer_energy_cell = not (passives_full and _passive_max_level.call("energy"))
+	# build queue: 2 shoot + up to 1 heal + up to 1 energy_cell + 1 shoot, shuffled
+	var queue: Array = []
+	queue.append(_make_card(picks[0]))
+	queue.append(_make_card(picks[1] if picks.size() > 1 else picks[0]))
+	if offer_heal:        queue.append(_make_card("heal"))
+	if offer_energy_cell: queue.append(_make_card("energy_cell"))
+	queue.append(_make_card(picks[2] if picks.size() > 2 else picks[0]))
 	queue.shuffle()
 	_card_drop_queue = queue
 
-func _starting_loop() -> Array:
-	return [_make_card("main_shot")]
+func _starting_weapons() -> Dictionary:
+	return {"primary": _make_card("main_shot"), "secondary": {}, "tertiary": {}}
 
 func _make_fleet(wave_idx:int, keep_fraction:float=0.75) -> FleetData:
 	var cfg = WAVE_CONFIGS[wave_idx].duplicate(true)
 	var keep = int(round(cfg["enemies"].size() * keep_fraction))
 	cfg["enemies"] = cfg["enemies"].slice(0, keep)
+	# scale x positions from the original 480px design width to the current W
+	var x_scale := float(W) / 480.0
+	for ed in cfg["enemies"]:
+		ed[0] = int(round(ed[0] * x_scale))
 	var fl = FleetData.new()
 	fl.setup(cfg)
 	var wave_hp = WAVE_HP[clamp(wave_idx, 0, WAVE_HP.size()-1)]
 	for e in fl.enemies: e.hp = wave_hp
 	for i in fl.enemies.size():
+		fl.enemies[i].slot_idx = i
 		if i in _wave_carrier_slots:
 			fl.enemies[i].carries_card = true
+		elif i in _depleted_carrier_slots:
+			fl.enemies[i].card_depleted = true
 	return fl
+
+func _on_card_collected(slot: int) -> void:
+	if slot < 0: return
+	# retire this slot — it will render as depleted on future spawns
+	_wave_carrier_slots.erase(slot)
+	if not _depleted_carrier_slots.has(slot):
+		_depleted_carrier_slots.append(slot)
+	# mark any currently alive enemy at this slot so it blinks immediately
+	if _fleet:
+		for e in _fleet.enemies:
+			if e.slot_idx == slot:
+				e.carries_card = false
+				e.card_depleted = true
+	# pick a replacement carrier from slots not yet used
+	var keep = int(round(WAVE_CONFIGS[_wave]["enemies"].size() * 0.75))
+	var used = _wave_carrier_slots.duplicate()
+	used.append_array(_depleted_carrier_slots)
+	var pool: Array = []
+	for i in keep:
+		if not used.has(i): pool.append(i)
+	if pool.is_empty(): return
+	var new_slot = pool[randi() % pool.size()]
+	_wave_carrier_slots.append(new_slot)
+	# mark the new carrier on the live fleet if it's still alive
+	if _fleet:
+		for e in _fleet.enemies:
+			if e.slot_idx == new_slot and e.alive:
+				e.carries_card = true
+				e.card_depleted = false
+
+func _spawn_ghost(gx:float, gy:float) -> void:
+	var g = GhostData.new(); g.init(gx, gy, _player.x, _player.y); _ghosts.append(g)
 
 func _assign_charger(fleet: FleetData) -> void:
 	var candidates = fleet.alive_enemies()
@@ -1105,14 +1161,15 @@ func _play(snd:AudioStreamPlayer) -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 func _start_game() -> void:
 	_player = PlayerData.new(); _player.init()
-	_player.loop = _starting_loop(); _player.recalc_max_lives()
+	var _sw = _starting_weapons()
+	_player.primary = _sw["primary"]; _player.secondary = _sw["secondary"]; _player.tertiary = _sw["tertiary"]
+	_player.recalc_max_lives()
 	_fleet=null; _boss=null; _boss_minions=null
 	_boss_timer=0; _boss_dq=[]
-	_pbullets=[]; _ebullets=[]; _expls=[]; _cdrops=[]; _collected=[]
+	_pbullets=[]; _ebullets=[]; _expls=[]; _ghosts=[]; _cdrops=[]; _collected=[]
 	_score=0; _wave=0; _wave_timer=WAVE_INTRO_DUR
 	_generate_card_drop_queue()
 	_evo_kills=0; _evo_ready=false; _evo_flash_timer=0
-	_cforge_cursor=0; _cforge_sel1=-1; _cforge_flash_timer=0; _cforge_result_idx=0; _cforge_result={}; _cforge_msg=""
 
 func _launch_wave() -> void:
 	var keep = int(round(WAVE_CONFIGS[_wave]["enemies"].size() * 0.75))
@@ -1120,8 +1177,9 @@ func _launch_wave() -> void:
 	for i in keep: idx_pool.append(i)
 	idx_pool.shuffle()
 	_wave_carrier_slots = idx_pool.slice(0, min(CARRIER_COUNT, idx_pool.size()))
+	_depleted_carrier_slots = []
 	_fleet    = _make_fleet(_wave, 0.75)
-	_pbullets=[]; _ebullets=[]; _expls=[]; _cdrops=[]; _collected=[]
+	_pbullets=[]; _ebullets=[]; _expls=[]; _ghosts=[]; _cdrops=[]; _collected=[]
 	_kills_this_spawn = 0; _respawns_no_kill = 0
 	_generate_card_drop_queue()
 	_play(_snd_wave)
@@ -1129,8 +1187,6 @@ func _launch_wave() -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 # Input
 # ─────────────────────────────────────────────────────────────────────────────
-var _fire_left  := false
-var _fire_right := false
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -1139,6 +1195,13 @@ func _input(event: InputEvent) -> void:
 			_muted = not _muted
 			var music = get_node("../AudioStreamPlayer") as AudioStreamPlayer
 			if music: music.stream_paused = _muted
+			return
+		if k == KEY_F11 or (k == KEY_ENTER and event.alt_pressed):
+			var win = get_viewport().get_window()
+			if win.mode == Window.MODE_FULLSCREEN:
+				win.mode = Window.MODE_WINDOWED
+			else:
+				win.mode = Window.MODE_FULLSCREEN
 			return
 
 		match _st:
@@ -1152,16 +1215,24 @@ func _input(event: InputEvent) -> void:
 				elif k == KEY_SPACE: _wave_timer=0
 			GS.PLAYING:
 				if k == KEY_ESCAPE: _prev_st=_st; _pause_sel=0; _st=GS.PAUSED
-				elif k == KEY_I: _arr_cursor=0; _arr_held=null; _arr_from_playing=true; _st=GS.CARD_ARRANGE
-				elif k == KEY_Z: _fire_left=true
-				elif k == KEY_X: _fire_right=true
+				elif k == KEY_I: _arr_cursor=0; _arr_from_playing=true; _st=GS.CARD_ARRANGE
+				elif k == KEY_SPACE:
+					var _wpns = [_player.primary, _player.secondary, _player.tertiary]
+					for _i in range(1, 4):
+						var _next = (_player.active_weapon + _i) % 3
+						if not _wpns[_next].is_empty():
+							_player.active_weapon = _next; _player.weapon_timer = 0; break
 				elif k == KEY_B:
-					_fleet=null; _pbullets=[]; _ebullets=[]; _expls=[]; _cdrops=[]
+					_fleet=null; _pbullets=[]; _ebullets=[]; _expls=[]; _ghosts=[]; _cdrops=[]
 					_boss=BossData.new(); _boss_timer=WAVE_INTRO_DUR; _st=GS.BOSS_INTRO
 			GS.BOSS:
 				if k == KEY_ESCAPE: _prev_st=_st; _pause_sel=0; _st=GS.PAUSED
-				elif k == KEY_Z: _fire_left=true
-				elif k == KEY_X: _fire_right=true
+				elif k == KEY_SPACE:
+					var _wpns_b = [_player.primary, _player.secondary, _player.tertiary]
+					for _i in range(1, 4):
+						var _next = (_player.active_weapon + _i) % 3
+						if not _wpns_b[_next].is_empty():
+							_player.active_weapon = _next; _player.weapon_timer = 0; break
 			GS.BOSS_INTRO:
 				if k == KEY_ESCAPE: _prev_st=_st; _pause_sel=0; _st=GS.PAUSED
 			GS.PAUSED:
@@ -1170,55 +1241,9 @@ func _input(event: InputEvent) -> void:
 				elif k == KEY_ENTER or k == KEY_SPACE:
 					if _pause_sel==0: _st=_prev_st
 					else: _menu_sel=0; _st=GS.MENU
-			GS.CARD_SELECT:  # legacy — redirect to merged screen
-				_arr_focus = 0 if _collected.size() > 0 else 1
-				_st = GS.CARD_ARRANGE
-			GS.CARD_FORGE:
-				if _cforge_flash_timer > 0:
-					pass  # block input during blink
-				elif k == KEY_ESCAPE:
-					_cforge_sel1=-1; _cforge_msg=""
-					_st = GS.CARD_ARRANGE
-				elif k == KEY_LEFT:
-					if _player.loop.size() > 0:
-						_cforge_cursor = (_cforge_cursor-1+_player.loop.size()) % _player.loop.size()
-				elif k == KEY_RIGHT:
-					if _player.loop.size() > 0:
-						_cforge_cursor = (_cforge_cursor+1) % _player.loop.size()
-				elif k == KEY_SPACE:
-					if _player.loop.size() >= 2:
-						if _cforge_sel1 == -1:
-							_cforge_sel1 = _cforge_cursor
-							_cforge_msg = "NOW SELECT CARD TO MERGE WITH"
-						else:
-							if _cforge_cursor == _cforge_sel1:
-								_cforge_msg = "PICK A DIFFERENT CARD"
-							else:
-								var c1 = _player.loop[_cforge_sel1]
-								var c2 = _player.loop[_cforge_cursor]
-								if c1["id"] != c2["id"]:
-									_cforge_msg = "CARDS MUST MATCH"
-								elif max(c1.get("level",1), c2.get("level",1)) >= 3:
-									_cforge_msg = "ALREADY MAX LEVEL"
-								else:
-									var new_lvl = max(c1.get("level",1), c2.get("level",1)) + 1
-									var fused = c1.duplicate(); fused["level"] = new_lvl
-									var i1 = _cforge_sel1; var i2 = _cforge_cursor
-									if i1 < i2:
-										_player.loop.remove_at(i2); _player.loop.remove_at(i1)
-									else:
-										_player.loop.remove_at(i1); _player.loop.remove_at(i2)
-									var insert_at = min(i1,i2)
-									_player.loop.insert(insert_at, fused); _player.recalc_max_lives()
-									if _player.loop_idx >= _player.loop.size():
-										_player.loop_idx = max(_player.loop.size()-1,0); _player.loop_timer=0
-									_cforge_result = fused
-									_cforge_result_idx = insert_at
-									_cforge_flash_timer = 60
-									_cforge_sel1=-1; _cforge_msg=""
 			GS.CARD_ARRANGE:
 				if k == KEY_I or (k == KEY_ESCAPE and _arr_from_playing):
-					_arr_held=null; _arr_from_playing=false; _st=GS.PLAYING; return
+					_arr_from_playing=false; _st=GS.PLAYING; return
 				if _arr_focus == 0 and _collected.size() > 0:
 					# ── Card pick section ──
 					if k == KEY_UP:
@@ -1231,14 +1256,14 @@ func _input(event: InputEvent) -> void:
 						var sel_card = _collected[_csel_cursor]
 						var is_passive = sel_card["category"] in ["heal","energy"]
 						var sel_level  = sel_card.get("level", 1)
-						_collected.clear(); _csel_chosen=[]; _arr_held=null
-						_card_op_msg = ""
-						_cforge_cursor=0; _cforge_sel1=-1; _cforge_flash_timer=0; _cforge_result_idx=0; _cforge_result={}; _cforge_msg=""
+						_collected.clear()
 						if sel_level > 1:
+							# upgrade existing card in primary/secondary or passives
 							var _upg_done := false
-							for i in range(_player.loop.size()):
-								if _player.loop[i]["id"] == sel_card["id"]:
-									_player.loop[i] = sel_card; _player.recalc_max_lives()
+							for slot in ["primary","secondary","tertiary"]:
+								var w = _player.get(slot) as Dictionary
+								if not w.is_empty() and w["id"] == sel_card["id"]:
+									_player.set(slot, sel_card); _player.recalc_max_lives()
 									_upg_done = true; break
 							if not _upg_done:
 								for i in range(_player.passives.size()):
@@ -1246,7 +1271,7 @@ func _input(event: InputEvent) -> void:
 										var up = sel_card.duplicate(); up.erase("_timer")
 										_player.passives[i] = up; _player.recalc_max_lives(); break
 						elif is_passive:
-							if _player.passives.size() < 2:
+							if _player.passives.size() < MAX_PASSIVES:
 								_player.passives.append(sel_card); _player.recalc_max_lives()
 							else:
 								var match_idx = -1
@@ -1258,40 +1283,26 @@ func _input(event: InputEvent) -> void:
 									var new_lvl = min(max(old.get("level",1), sel_card.get("level",1)) + 1, 3)
 									var fused = old.duplicate(); fused["level"] = new_lvl; fused.erase("_timer")
 									_player.passives[match_idx] = fused; _player.recalc_max_lives()
-									_cforge_result = fused; _cforge_result_idx = -1; _cforge_flash_timer = 60
-						elif _player.loop.size() >= _player.MAX_LOOP:
-							_replace_card = sel_card; _replace_cursor = 0
-							_st = GS.CARD_REPLACE
 						else:
-							_player.loop.append(sel_card); _player.recalc_max_lives()
-						_arr_focus = 1; _arr_cursor = 0
+							# assign shoot card to first empty weapon slot; fall back to cursor if all full
+							var _slots = ["primary","secondary","tertiary"]
+							var _target = ""
+							for _s in _slots:
+								if (_player.get(_s) as Dictionary).is_empty():
+									_target = _s; break
+							if _target == "": _target = _slots[clamp(_arr_cursor, 0, 2)]
+							_player.set(_target, sel_card); _player.recalc_max_lives()
+						_arr_focus = 1; _arr_cursor = clamp(_arr_cursor, 0, 2)
 				else:
-					# ── Loop arrange section ──
-					var _slot_count = _player.loop.size() + 1  # +1 for NEXT WAVE / CLOSE
+					# ── Weapons section: 4 slots — primary(0), secondary(1), tertiary(2), close(3) ──
 					if k == KEY_TAB and _collected.size() > 0:
 						_arr_focus = 0
 					elif k == KEY_LEFT:
-						if _arr_held != null:
-							if _arr_held > 0:
-								var tmp=_player.loop[_arr_held]; _player.loop[_arr_held]=_player.loop[_arr_held-1]; _player.loop[_arr_held-1]=tmp
-								if _player.loop_idx == _arr_held: _player.loop_idx -= 1
-								elif _player.loop_idx == _arr_held - 1: _player.loop_idx += 1
-								_arr_held-=1; _arr_cursor=_arr_held
-						else:
-							_arr_cursor = (_arr_cursor-1+_slot_count) % _slot_count
+						_arr_cursor = (_arr_cursor - 1 + 4) % 4
 					elif k == KEY_RIGHT:
-						if _arr_held != null:
-							if _arr_held < _player.loop.size()-1:
-								var tmp=_player.loop[_arr_held]; _player.loop[_arr_held]=_player.loop[_arr_held+1]; _player.loop[_arr_held+1]=tmp
-								if _player.loop_idx == _arr_held: _player.loop_idx += 1
-								elif _player.loop_idx == _arr_held + 1: _player.loop_idx -= 1
-								_arr_held+=1; _arr_cursor=_arr_held
-						else:
-							_arr_cursor = (_arr_cursor+1) % _slot_count
+						_arr_cursor = (_arr_cursor + 1) % 4
 					elif k == KEY_SPACE:
-						var on_next_wave = (_arr_cursor == _player.loop.size())
-						if on_next_wave and _arr_held == null:
-							_arr_held=null
+						if _arr_cursor == 3:  # CLOSE / NEXT WAVE
 							if _arr_from_playing:
 								_arr_from_playing=false; _st=GS.PLAYING
 							else:
@@ -1300,41 +1311,19 @@ func _input(event: InputEvent) -> void:
 									_wave+=1; _wave_timer=WAVE_INTRO_DUR; _st=GS.WAVE_INTRO
 								else:
 									_boss=BossData.new(); _boss_timer=WAVE_INTRO_DUR; _st=GS.BOSS_INTRO
-						else:
-							if _arr_held == null and not on_next_wave:
-								_arr_held = _arr_cursor
-							else:
-								_arr_held = null
-					elif k==KEY_Z:
-						if _arr_held==null and _player.loop.size() > 0 and _arr_cursor < _player.loop.size():
-							_player.loop.remove_at(_arr_cursor); _player.recalc_max_lives()
-							if _player.loop_idx >= _player.loop.size():
-								_player.loop_idx = max(_player.loop.size()-1, 0); _player.loop_timer = 0
-							_arr_cursor = clamp(_arr_cursor, 0, _player.loop.size())
-			GS.CARD_REPLACE:
-				if k == KEY_LEFT:
-					_replace_cursor = (_replace_cursor - 1 + _player.loop.size()) % _player.loop.size()
-				elif k == KEY_RIGHT:
-					_replace_cursor = (_replace_cursor + 1) % _player.loop.size()
-				elif k == KEY_SPACE:
-					_player.loop[_replace_cursor] = _replace_card
-					_player.recalc_max_lives()
-					if _player.loop_idx >= _player.loop.size():
-						_player.loop_idx = 0; _player.loop_timer = 0
-					_replace_card = {}; _arr_cursor = 0; _arr_held = null
-					_st = GS.CARD_ARRANGE
-			GS.CARD_OP:
-				if k == KEY_ESCAPE:
-					_collected.insert(clamp(_csel_cursor, 0, _collected.size()), _card_op_card)
-					_card_op_msg = ""; _arr_focus = 0; _st = GS.CARD_ARRANGE
-				elif k == KEY_LEFT:
-					if _player.loop.size() > 0:
-						_card_op_cursor = (_card_op_cursor-1+_player.loop.size()) % _player.loop.size()
-				elif k == KEY_RIGHT:
-					if _player.loop.size() > 0:
-						_card_op_cursor = (_card_op_cursor+1) % _player.loop.size()
-				elif k == KEY_X:
-					_execute_card_op()
+					elif k == KEY_Z:
+						var _clr_slots = ["primary","secondary","tertiary"]
+						if _arr_cursor < 3:
+							var _clr = _clr_slots[_arr_cursor]
+							_player.set(_clr, {})
+							if _player.active_weapon == _arr_cursor:
+								# fall back to first filled slot or 0
+								var _fb = 0
+								for _i in range(3):
+									if not (_player.get(_clr_slots[_i]) as Dictionary).is_empty():
+										_fb = _i; break
+								_player.active_weapon = _fb
+							_player.weapon_timer = 0
 			GS.GAME_OVER, GS.WIN:
 				if k == KEY_R: _menu_sel=0; _st=GS.MENU
 
@@ -1343,7 +1332,6 @@ func _input(event: InputEvent) -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 func _process(_delta: float) -> void:
 	_update_state()
-	_fire_left=false; _fire_right=false
 	if _shake > 0: _shake -= 1
 	for ft in _float_texts: ft["y"] -= 1.8; ft["timer"] -= 1
 	_float_texts = _float_texts.filter(func(ft): return ft["timer"] > 0)
@@ -1355,35 +1343,30 @@ func _process(_delta: float) -> void:
 func _update_state() -> void:
 	match _st:
 		GS.WAVE_INTRO:
-			if _player: _player.update(false,false)
+			if _player: _player.update()
 			_wave_timer -= 1
 			if _wave_timer <= 0: _launch_wave(); _st=GS.PLAYING
 		GS.PLAYING:
 			_update_playing()
 		GS.BOSS_INTRO:
-			if _player: _player.update(false,false)
+			if _player: _player.update()
 			_boss_timer -= 1
 			if _boss_timer <= 0:
-				_pbullets=[]; _ebullets=[]; _expls=[]
+				_pbullets=[]; _ebullets=[]; _expls=[]; _ghosts=[]
 				_play(_snd_wave); _st=GS.BOSS
 		GS.BOSS:
 			_update_boss()
 		GS.BOSS_DEATH:
 			_update_boss_death()
-		GS.CARD_FORGE:
-			if _cforge_flash_timer > 0:
-				_cforge_flash_timer -= 1
-				if _cforge_flash_timer <= 0:
-					_st = GS.CARD_ARRANGE
 		GS.EVO_FLASH:
 			_evo_flash_timer -= 1
 			if _evo_flash_timer <= 0:
 				_evo_ready = true
 				_evo_kills = 0
 				_fleet = null
-				_csel_cursor=0; _csel_chosen=[]
+				_csel_cursor=0
 				_auto_upgrade_collected()
-				_arr_cursor=0; _arr_held=null; _arr_from_playing=false
+				_arr_cursor=0; _arr_from_playing=false
 				_arr_focus = 0 if _collected.size() > 0 else 1
 				_st = GS.CARD_ARRANGE
 		_:
@@ -1467,7 +1450,7 @@ func _update_bullets_and_expls() -> void:
 	_expls    = _expls.filter(func(e): return not e.done)
 
 func _update_playing() -> void:
-	var fired = _player.update(_fire_left, _fire_right)
+	var fired = _player.update()
 	for b in fired: _pbullets.append(b); _play(_snd_pshoot)
 	_consume_muzzle_events()
 	_consume_heal_events()
@@ -1499,9 +1482,13 @@ func _update_playing() -> void:
 				_pbullets.erase(b)
 				if e.hit(2 if b.homing else 1):
 					_score += 10
-					_expls.append(_make_expl(e.x,e.y))
+					if e.carries_card or e.card_depleted:
+						_expls.append(_make_expl(e.x,e.y))
+					else:
+						_expls.append(_make_expl(e.x,e.y,6.0))
+						_spawn_ghost(e.x,e.y)
 					_play(_snd_expl)
-					if e.carries_card and _collected.size() < EVO_CARDS: _cdrops.append(_make_cdrop(e.x,e.y))
+					if e.carries_card and _collected.size() < EVO_CARDS: _cdrops.append(_make_cdrop(e.x,e.y,e.slot_idx))
 					_register_kill()
 				break
 
@@ -1518,14 +1505,34 @@ func _update_playing() -> void:
 		for e in _fleet.alive_enemies():
 			if e.rect().intersects(_player.rect()):
 				e.alive=false
-				_expls.append(_make_expl(e.x,e.y)); _play(_snd_expl)
+				_expls.append(_make_expl(e.x,e.y))
+				_play(_snd_expl)
 				if _player.hit(): _shake=20
+
+	# ghosts (kamikaze spirits of non-carrier enemies)
+	for g in _ghosts: g.update(_player.x, _player.y)
+	for b in _pbullets.duplicate():
+		for g in _ghosts:
+			if g.alive:
+				var dx = b.x - g.x; var dy = b.y - g.y
+				if dx*dx + dy*dy < 18.0*18.0:
+					_pbullets.erase(b); g.alive=false
+					_expls.append(_make_expl(g.x,g.y)); _play(_snd_expl)
+					_score += 5; break
+	if _player.invincible == 0:
+		for g in _ghosts:
+			if g.alive and g.rect().intersects(_player.rect()):
+				g.alive=false
+				_expls.append(_make_expl(g.x,g.y)); _play(_snd_expl)
+				if _player.hit(): _shake=20
+	_ghosts = _ghosts.filter(func(g): return g.alive and g.y < H + 20)
 
 	# card drops
 	for cd in _cdrops: cd.update()
 	for cd in _cdrops.duplicate():
 		if cd.rect().intersects(_player.collect_rect()) and _collected.size() < EVO_CARDS:
 			_cdrops.erase(cd); _collected.append(cd.card)
+			_on_card_collected(cd.from_slot)
 			_check_evo_trigger()
 	_cdrops = _cdrops.filter(func(cd): return not cd.off_screen())
 
@@ -1540,20 +1547,20 @@ func _update_playing() -> void:
 		else: _respawns_no_kill = 0
 		_kills_this_spawn = 0
 		_fleet = _make_fleet(_wave, 0.75)
-		if _respawns_no_kill >= 3: _assign_charger(_fleet)
+		if _respawns_no_kill >= 5: _assign_charger(_fleet)
 	elif alive_e2.all(func(e): return e.y >= H * 0.75):
 		if _kills_this_spawn == 0: _respawns_no_kill += 1
 		else: _respawns_no_kill = 0
 		_kills_this_spawn = 0
 		var new_fleet = _make_fleet(_wave, 0.75)
-		if _respawns_no_kill >= 3: _assign_charger(new_fleet)
+		if _respawns_no_kill >= 5: _assign_charger(new_fleet)
 		_fleet.enemies.append_array(new_fleet.enemies)
 
 	if _player.lives <= 0:
 		_st=GS.GAME_OVER
 
 func _update_boss() -> void:
-	var fired = _player.update(_fire_left, _fire_right)
+	var fired = _player.update()
 	for b in fired: _pbullets.append(b); _play(_snd_pshoot)
 	_consume_muzzle_events()
 	_consume_heal_events()
@@ -1650,15 +1657,17 @@ func _update_boss_death() -> void:
 	_boss_dq=still
 	if _boss_dq.is_empty() and _expls.is_empty(): _st=GS.WIN
 
-func _make_expl(ex:float,ey:float) -> ExplosionData:
-	var e=ExplosionData.new(); e.init(ex,ey); return e
+func _make_expl(ex:float,ey:float,sc:float=3.0) -> ExplosionData:
+	var e=ExplosionData.new(); e.init(ex,ey,sc); return e
 
 func _auto_upgrade_collected() -> void:
 	# For each card id present in _collected, if the player already owns that id,
 	# upgrade the FIRST matching collected card to owned_level+1 (max 3).
 	# Further duplicates of the same id stay at level 1.
 	var upgraded_ids := {}
-	var owned : Array = _player.loop + _player.passives
+	var owned : Array = _player.passives.duplicate()
+	for _w in [_player.primary, _player.secondary, _player.tertiary]:
+		if not _w.is_empty(): owned.append(_w)
 	for card in _collected:
 		var cid = card["id"]
 		if cid in upgraded_ids:
@@ -1671,18 +1680,9 @@ func _auto_upgrade_collected() -> void:
 			card["level"] = owned_level + 1
 			upgraded_ids[cid] = true
 
-func _can_forge() -> bool:
-	var loop = _player.loop
-	for i in range(loop.size()):
-		for j in range(i+1, loop.size()):
-			var c1 = loop[i]; var c2 = loop[j]
-			if c1["id"] == c2["id"] and max(c1.get("level",1), c2.get("level",1)) < 3:
-				return true
-	return false
-
-func _make_cdrop(cx:float,cy:float) -> CardDropData:
+func _make_cdrop(cx:float,cy:float,slot:int=-1) -> CardDropData:
 	var card = _card_drop_queue.pop_front() if not _card_drop_queue.is_empty() else _random_card()
-	var cd=CardDropData.new(); cd.init(cx,cy,card); return cd
+	var cd=CardDropData.new(); cd.init(cx,cy,card,slot); return cd
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Drawing
@@ -1690,7 +1690,6 @@ func _make_cdrop(cx:float,cy:float) -> CardDropData:
 var _rng_shake := RandomNumberGenerator.new()
 
 func _draw() -> void:
-	# Black starfield background
 	draw_rect(Rect2(0, 0, W, H), Color.BLACK)
 	var t := Engine.get_process_frames()
 	for s in _stars:
@@ -1710,6 +1709,7 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 	_draw_hud()
 	_draw_overlay()
+	_draw_right_panel()
 
 func _draw_entities() -> void:
 	match _st:
@@ -1720,9 +1720,15 @@ func _draw_entities() -> void:
 			if _player: _draw_player()
 			_draw_bullets()
 			_draw_expls()
+			_draw_ghosts()
 			for cd in _cdrops: _draw_card_drop(cd)
-		GS.CARD_SELECT, GS.CARD_FORGE, GS.CARD_ARRANGE:
-			pass
+		GS.CARD_ARRANGE:
+			if _player: _draw_player()
+			if _arr_from_playing:
+				if _fleet:  _draw_fleet(_fleet)
+				_draw_bullets()
+				_draw_expls()
+				for cd in _cdrops: _draw_card_drop(cd)
 		GS.BOSS_INTRO:
 			if _player: _draw_player()
 		GS.BOSS:
@@ -1755,7 +1761,7 @@ func _draw_muzzle_flashes() -> void:
 	for mf in _muzzle_flashes:
 		var alpha = float(mf["timer"]) / float(mf["total"])
 		var col   = Color(mf["color"].r * 1.5, mf["color"].g * 1.5, mf["color"].b * 1.5, alpha)
-		_draw_sprite_centered(_spr["expl"], 0, Vector2(mf["x"], mf["y"]), mf["scale"], col)
+		_draw_sprite_centered(_spr["expl"], 0, Vector2(mf["x"], mf["y"]), mf["scale"] * DRAW_SCALE, col)
 
 func _draw_float_texts() -> void:
 	for ft in _float_texts:
@@ -1773,13 +1779,13 @@ func _draw_sprite_centered(frames:Array, fi:int, pos:Vector2, scale:float=1.0, t
 func _draw_player() -> void:
 	var p = _player
 	if p.hit_expl_timer > 0:
-		_draw_sprite_centered(_spr["expl"], p.hit_expl_fi, Vector2(p.hit_expl_x,p.hit_expl_y), 3.0)
+		_draw_sprite_centered(_spr["expl"], p.hit_expl_fi, Vector2(p.hit_expl_x,p.hit_expl_y), 3.0 * DRAW_SCALE)
 		return
 	# dash ghost trail
 	var trail_key = "ship_left" if p.dash_vx < 0 else "ship_right"
 	for ghost in p.dash_trail:
 		var alpha = float(ghost["t"]) / 8.0 * 0.55
-		_draw_sprite_centered(_spr[trail_key], ghost["fi"], Vector2(ghost["x"], ghost["y"]), 2.2,
+		_draw_sprite_centered(_spr[trail_key], ghost["fi"], Vector2(ghost["x"], ghost["y"]), 2.2 * DRAW_SCALE,
 			Color(0.4, 0.7, 1.0, alpha))
 	if p.invincible > 0 and (p.invincible / 6) % 2 == 0: return
 	var key  = "ship_"+p.facing
@@ -1789,7 +1795,7 @@ func _draw_player() -> void:
 		tint = Color(1.0 + _ship_flash_col.r * t * 0.6,
 					 1.0 + _ship_flash_col.g * t * 0.6,
 					 1.0 + _ship_flash_col.b * t * 0.6)
-	_draw_sprite_centered(_spr[key], p.fi, Vector2(p.x,p.y), 2.2, tint)
+	_draw_sprite_centered(_spr[key], p.fi, Vector2(p.x,p.y), 2.2 * DRAW_SCALE, tint)
 
 const _ENEMY_NFRAMES := {"e_sml":2, "e_med":4, "e_big":2}
 const _ENEMY_SCALE   := {"e_sml":2.0, "e_med":2.0, "e_big":1.0}
@@ -1801,48 +1807,60 @@ func _draw_fleet(fleet: FleetData) -> void:
 		var frames = _spr[e.key]
 		var nf     = _ENEMY_NFRAMES[e.key]
 		var fi     = fleet.frame_idx % nf
-		var scale  = _ENEMY_SCALE[e.key]
+		var scale  = _ENEMY_SCALE[e.key] * DRAW_SCALE
 		var tint := Color.WHITE
 		if e.flash_timer > 0:
 			tint = Color(1.627, 0.5, 0.5)
 		elif e.charging:
 			tint = Color(2.5, 0.3, 0.3)
-		elif e.carries_card and (Engine.get_process_frames() / 12) % 2 == 0:
-			tint = Color(3.0, 3.0, 3.0)
+		elif e.card_depleted and (Engine.get_process_frames() / 18) % 2 == 0:
+			tint = Color(0.08, 0.08, 0.08)
 		_draw_sprite_centered(frames, fi, Vector2(e.x,e.y), scale, tint)
 
 func _draw_boss() -> void:
 	var b   = _boss
 	var tint = Color.WHITE
 	if b.flash_t > 0 and b.flash_t % 4 < 2: tint=Color(2,2,2)
-	_draw_sprite_centered(_spr["boss"], b.fi, Vector2(b.x,b.y), 3.0, tint)
+	_draw_sprite_centered(_spr["boss"], b.fi, Vector2(b.x,b.y), 3.0 * DRAW_SCALE, tint)
 
 func _draw_bullets() -> void:
 	for b in _pbullets:
-		_draw_sprite_centered(_spr["bolt_player"], b.fi, Vector2(b.x,b.y), b.bscale * 1.35, Color.WHITE)
-		_draw_sprite_centered(_spr["bolt_player"], b.fi, Vector2(b.x,b.y), b.bscale, Color(0.9,0.1,0.1))
-	for b in _ebullets: _draw_sprite_centered(_spr["bolt_enemy"],  b.fi, Vector2(b.x,b.y))
+		_draw_sprite_centered(_spr["bolt_player"], b.fi, Vector2(b.x,b.y), b.bscale * 1.35 * DRAW_SCALE, Color.WHITE)
+		_draw_sprite_centered(_spr["bolt_player"], b.fi, Vector2(b.x,b.y), b.bscale * DRAW_SCALE, Color(0.9,0.1,0.1))
+	for b in _ebullets: _draw_sprite_centered(_spr["bolt_enemy"], b.fi, Vector2(b.x,b.y), DRAW_SCALE)
 
 func _draw_expls() -> void:
-	for e in _expls: _draw_sprite_centered(_spr["expl"], e.fi, Vector2(e.x,e.y), 3.0)
+	for e in _expls: _draw_sprite_centered(_spr["expl"], e.fi, Vector2(e.x,e.y), e.scale * DRAW_SCALE)
+
+func _draw_ghosts() -> void:
+	var frames = _spr["e_sml"]
+	var nf     = _ENEMY_NFRAMES["e_sml"]
+	var fi     = (Engine.get_process_frames() / 6) % nf
+	var blink_on = (Engine.get_process_frames() / 8) % 2 == 0
+	var tint = Color(2.5, 0.2, 0.2) if blink_on else Color(0.9, 0.1, 0.1)
+	for g in _ghosts:
+		if not g.alive: continue
+		_draw_sprite_centered(frames, fi, Vector2(g.x, g.y), _ENEMY_SCALE["e_sml"] * DRAW_SCALE, tint)
 
 func _draw_card_drop(cd: CardDropData) -> void:
 	var col = CARD_COLORS[cd.card["category"]]
-	var hw  = CardDropData.W_D / 2.0
-	var hh  = CardDropData.H_D / 2.0
+	var cw  = CardDropData.W_D * DRAW_SCALE
+	var ch  = CardDropData.H_D * DRAW_SCALE
+	var hw  = cw / 2.0
+	var hh  = ch / 2.0
 	draw_set_transform(Vector2(cd.x + _draw_sox, cd.y + _draw_soy), cd.rotation)
-	draw_rect(Rect2(-hw, -hh, CardDropData.W_D, CardDropData.H_D), col)
-	draw_rect(Rect2(-hw, -hh, CardDropData.W_D, CardDropData.H_D), WHITE, false, 1.0)
-	draw_rect(Rect2(-hw + 2.0, -hh + 2.0, 3, 3), WHITE)
+	draw_rect(Rect2(-hw, -hh, cw, ch), col)
+	draw_rect(Rect2(-hw, -hh, cw, ch), WHITE, false, 1.0)
+	draw_rect(Rect2(-hw + 2.0 * DRAW_SCALE, -hh + 2.0 * DRAW_SCALE, 3.0 * DRAW_SCALE, 3.0 * DRAW_SCALE), WHITE)
 	draw_set_transform(Vector2(_draw_sox, _draw_soy))  # restore shake
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HUD drawing
 # ─────────────────────────────────────────────────────────────────────────────
 func _draw_hud() -> void:
-	if _st not in [GS.MENU, GS.CARD_SELECT, GS.CARD_FORGE, GS.CARD_ARRANGE, GS.CARD_OP]:
+	if _st not in [GS.MENU, GS.CARD_ARRANGE]:
 		_draw_evo_bar()
-	if _st in [GS.MENU, GS.CARD_SELECT, GS.CARD_FORGE, GS.CARD_ARRANGE, GS.CARD_OP, GS.EVO_FLASH]: return
+	if _st in [GS.MENU, GS.CARD_ARRANGE, GS.EVO_FLASH]: return
 
 	if _player:
 		# score
@@ -1857,7 +1875,7 @@ func _draw_hud() -> void:
 		# HP bar
 		_draw_player_bars()
 		# card loop indicator
-		_draw_card_loop()
+		_draw_weapons_hud()
 		# cards collected
 	# boss HP bar (also shown in paused-during-boss)
 	if _boss and _st in [GS.BOSS, GS.BOSS_DEATH, GS.PAUSED]:
@@ -1877,57 +1895,57 @@ func _draw_player_bars() -> void:
 	var by_en = by_hp + bar_h + 3
 	var en_fill = int(bar_w * p.energy_pool / float(p.max_energy))
 	var starved = p.is_starved()
-	var blink_red = starved and (p.loop_timer / 6) % 2 == 0
+	var blink_red = starved and (p.weapon_timer / 6) % 2 == 0
 	var en_bg  = Color(0.235,0.039,0.039) if blink_red else Color(0.157,0.118,0.0)
 	var en_fc  = Color(0.863,0.118,0.118) if blink_red else Color(1.0,0.843,0.0)
 	var en_brd = Color(1,0.314,0.314)     if blink_red else Color(1.0,0.941,0.314)
 	draw_rect(Rect2(bx, by_en, bar_w, bar_h), en_bg)
 	draw_rect(Rect2(bx, by_en, en_fill, bar_h), en_fc)
 	draw_rect(Rect2(bx, by_en, bar_w, bar_h), en_brd, false, 1.0)
-	# salvo charge bar
-	if p.salvo_charge >= 6:
-		var fill_w = int(44 * min(float(p.salvo_charge-6),54)/54.0)
-		var sbx = p.x - 22; var sby = by_en + bar_h + 3
-		draw_rect(Rect2(sbx, sby, 44, bar_h), Color(0.235,0.235,0.235))
-		draw_rect(Rect2(sbx, sby, fill_w, bar_h), YELLOW)
-		draw_rect(Rect2(sbx, sby, 44, bar_h), Color(1,0.941,0.471), false, 1.0)
 
-func _draw_card_loop() -> void:
+func _draw_weapons_hud() -> void:
 	var p = _player
-	if p.loop.is_empty(): return
-	var dot_w := 14.0; var dot_h := 19.0; var gap := 4.0
-	var total_w = p.loop.size() * (dot_w+gap) - gap
+	var dot_w := 36.0; var dot_h := 22.0; var gap := 6.0
+	var total_w = 3*(dot_w+gap) - gap
 	var sx = (W - total_w) / 2.0
 	var sy = float(H) - dot_h - 6.0
-	for i in range(p.loop.size()):
-		var card = p.loop[i]
-		var cx   = sx + i*(dot_w+gap)
-		var col  = CARD_COLORS[card["category"]]
-		var dark = col * Color(0.25,0.25,0.25,1)
-		var is_active   = (i == p.loop_idx)
-		var is_flashing = (i == p.loop_flash_idx and p.loop_flash > 0)
-		var r = Rect2(cx, sy, dot_w, dot_h)
-		if is_flashing:
-			var flash_col = WHITE if (p.loop_flash/3)%2==0 else col
-			draw_rect(r, flash_col)
-			draw_rect(r, WHITE, false, 2.0)
-		elif is_active:
-			var progress = float(p.loop_timer) / float(PlayerData.effective_cycle(card))
-			var fill_h   = int(dot_h * progress)
-			draw_rect(r, dark)
-			if fill_h > 0: draw_rect(Rect2(cx, sy+dot_h-fill_h, dot_w, fill_h), col)
-			var blink_col = WHITE if (p.loop_timer/8)%2==0 else Color(0.549,0.549,0.549)
-			draw_rect(r, blink_col, false, 2.0)
-			if p.is_starved() and (p.loop_timer/6)%2==0:
-				draw_line(r.position, r.end, RED, 2.0)
-				draw_line(Vector2(r.position.x+r.size.x, r.position.y), Vector2(r.position.x, r.position.y+r.size.y), RED, 2.0)
+	var weapons = [p.primary, p.secondary, p.tertiary]
+	var labels  = ["PRI", "SEC", "TER"]
+	for i in range(3):
+		var weapon  = weapons[i]
+		var cx      = sx + i*(dot_w+gap)
+		var r       = Rect2(cx, sy, dot_w, dot_h)
+		var is_active = (i == p.active_weapon)
+		if weapon.is_empty():
+			draw_rect(r, Color(0.06,0.06,0.06))
+			draw_rect(r, Color(0.2,0.2,0.2) if is_active else Color(0.12,0.12,0.12), false, 1.5)
+			_ds_centered(labels[i], cx, dot_w, sy + dot_h/2 - 3, Color(0.3,0.3,0.3), 7)
 		else:
-			draw_rect(r, col)
-			draw_rect(r, Color(0.314,0.314,0.314), false, 1.0)
-		# Level pip dots (top-left corner): 1-3 gold squares
-		var lvl = card.get("level", 1)
-		for lv in range(lvl):
-			draw_rect(Rect2(cx+1+lv*4, sy+1, 3, 3), Color(1.0, 0.9, 0.2))
+			var col  = CARD_COLORS[weapon["category"]]
+			var dark = col * Color(0.2,0.2,0.2,1)
+			if is_active:
+				var progress = float(p.weapon_timer) / float(PlayerData.effective_cycle(weapon))
+				var fill_h   = int(dot_h * progress)
+				draw_rect(r, dark)
+				if fill_h > 0: draw_rect(Rect2(cx, sy+dot_h-fill_h, dot_w, fill_h), col)
+				var blink_col = WHITE if (p.weapon_timer/8)%2==0 else Color(0.6,0.6,0.6)
+				draw_rect(r, blink_col, false, 2.0)
+				if p.is_starved() and (p.weapon_timer/6)%2==0:
+					draw_line(r.position, r.end, RED, 2.0)
+					draw_line(Vector2(r.position.x+r.size.x,r.position.y), Vector2(r.position.x,r.position.y+r.size.y), RED, 2.0)
+			else:
+				draw_rect(r, col * Color(0.35,0.35,0.35,1))
+				draw_rect(r, Color(0.3,0.3,0.3), false, 1.5)
+			# weapon name (first word)
+			var word = weapon["name"].split(" ")[0]
+			_ds_centered(word, cx, dot_w, sy+dot_h/2-3, WHITE if is_active else Color(0.5,0.5,0.5), 7)
+			# level pips
+			var lvl = weapon.get("level", 1)
+			for lv in range(lvl):
+				draw_rect(Rect2(cx+2+lv*5, sy+2, 4, 3), Color(1.0,0.9,0.2) if is_active else Color(0.5,0.45,0.1))
+	# active indicator triangle above the active slot
+	var tri_cx = sx + p.active_weapon * (dot_w + gap) + dot_w / 2.0
+	draw_colored_polygon([Vector2(tri_cx-4,sy-2), Vector2(tri_cx+4,sy-2), Vector2(tri_cx,sy+3)], CYAN)
 
 func _draw_evo_bar() -> void:
 	var SEG     := 5
@@ -1985,18 +2003,23 @@ func _draw_boss_hp() -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 func _draw_overlay() -> void:
 	match _st:
-		GS.MENU:        _draw_menu()
-		GS.WAVE_INTRO:  _draw_wave_intro()
-		GS.BOSS_INTRO:  _draw_boss_intro()
-		GS.CARD_SELECT:  _draw_card_arrange()  # should not normally be reached
-		GS.CARD_FORGE:   _draw_card_forge()
-		GS.CARD_ARRANGE: _draw_card_arrange()
-		GS.CARD_OP:      _draw_card_op()
-		GS.CARD_REPLACE: _draw_card_replace()
+		GS.MENU:         _draw_menu()
+		GS.WAVE_INTRO:   _draw_wave_intro()
+		GS.BOSS_INTRO:   _draw_boss_intro()
+		GS.CARD_ARRANGE:
+			draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0, 0.5))
+			var _ca_blink := (Engine.get_process_frames() / 8) % 2 == 0
+			if _arr_from_playing:
+				if _ca_blink: _dc("LOADOUT", float(H)/2 - 16, CYAN, 20)
+			else:
+				if _ca_blink:
+					var _ec := Color(0.698, 0.275, 1.0)
+					_dc("EVOLUTION", float(H)/2 - 24, _ec, 20)
+					_dc("AVAILABLE", float(H)/2 + 8,  _ec, 20)
 		GS.EVO_FLASH:    _draw_evo_flash()
-		GS.PAUSED:      _draw_paused()
-		GS.GAME_OVER:   _draw_game_over()
-		GS.WIN:         _draw_win()
+		GS.PAUSED:       _draw_paused()
+		GS.GAME_OVER:    _draw_game_over()
+		GS.WIN:          _draw_win()
 
 func _draw_menu() -> void:
 	_dc("AUTO",   float(H)/2-160, CYAN,  24)
@@ -2026,239 +2049,6 @@ func _draw_paused() -> void:
 		var col    = CYAN  if i==_pause_sel else WHITE
 		var prefix = ">  " if i==_pause_sel else "   "
 		_dc(prefix+PAUSE_ITEMS[i], float(H)/2+i*48, col, 16)
-
-func _draw_card_select() -> void:
-	draw_rect(Rect2(0,0,W,H), DARK_BG)
-	_dc("CHOOSE CARD", 20.0, CYAN, 16)
-	_dc("add to your loop", 46.0, WHITE, 8)
-	draw_line(Vector2(20,60), Vector2(W-20,60), Color(0.314,0.314,0.314), 1.0)
-	for i in range(_collected.size()):
-		var card = _collected[i]
-		var y    = 70.0 + i*34.0
-		var col  = CARD_COLORS[card["category"]]
-		var sel  = i in _csel_chosen
-		var cur  = i == _csel_cursor
-		var is_manip = card.get("effect","") in ["deck_remove","deck_fuse","deck_upgrade"]
-		draw_rect(Rect2(20, y+2, 12, 16), col)
-		draw_rect(Rect2(20, y+2, 12, 16), WHITE, false, 1.0)
-		var prefix = "> " if cur  else "  "
-		var check  = "[x] " if sel else "[ ] "
-		var tc     = YELLOW if (is_manip and cur) else (WHITE if sel else Color(0.627,0.627,0.627))
-		var display_name = card["name"] if is_manip else (card["name"]+" "+_lvl_str(card))
-		_ds(prefix+check+display_name, Vector2(38, y+12), tc, 8)
-		var ce = _card_energy(card)
-		if ce != 0:
-			var esign = "+%d"%ce if ce>0 else str(ce)
-			var ec    = YELLOW if ce>0 else RED
-			_ds(esign, Vector2(W-30, y+12), ec, 8)
-	var sep_y = 70.0 + CARDS_TO_END*34.0 + 4
-	draw_line(Vector2(20,sep_y), Vector2(W-20,sep_y), Color(0.314,0.314,0.314), 1.0)
-	_dc("ADDING %d / 1 CARD" % _csel_chosen.size(), sep_y+10, CYAN, 8)
-	if _card_op_msg != "":
-		_dc(_card_op_msg, sep_y+24, RED, 8)
-	else:
-		_dc("SPC:choose", sep_y+24, Color(0.471,0.471,0.471), 8)
-
-func _draw_card_forge() -> void:
-	draw_rect(Rect2(0,0,W,H), DARK_BG)
-	_dc("FORGE", 20.0, YELLOW, 16)
-	var subtitle := "SELECT FIRST CARD" if _cforge_sel1 == -1 else "SELECT CARD TO MERGE WITH"
-	_dc(subtitle, 46.0, WHITE, 8)
-	draw_line(Vector2(20,60), Vector2(W-20,60), Color(0.314,0.314,0.314), 1.0)
-	var n  = _player.loop.size()
-	if n > 0:
-		var cw  = int(clamp((W-24.0)/n-4, 28, 44))
-		var ch  = 56.0; var gap = 4.0
-		var tw  = n*(cw+gap)-gap
-		var ox  = (W-tw)/2.0; var oy = H/2.0 - ch/2.0
-		for i in range(n):
-			var card      = _player.loop[i]
-			var cx        = ox + i*(cw+gap)
-			var col       = CARD_COLORS[card["category"]]
-			var dark      = col * Color(0.25,0.25,0.25,1)
-			var is_cursor = (i == _cforge_cursor)
-			var is_sel1   = (i == _cforge_sel1)
-			var flashing  = is_sel1 and _cforge_flash_timer == 0
-			var cy        = oy - 8.0 if is_cursor else oy
-			if is_sel1: draw_rect(Rect2(cx-2,cy-2,cw+4,ch+4), YELLOW)
-			draw_rect(Rect2(cx,cy,cw,ch), col if flashing else dark)
-			draw_rect(Rect2(cx,cy,cw,6), col)
-			var border = YELLOW if is_sel1 else (CYAN if is_cursor else Color(0.314,0.314,0.314))
-			draw_rect(Rect2(cx,cy,cw,ch), border, false, 2.0)
-			# blink result card
-			if _cforge_flash_timer > 0 and i == _cforge_result_idx:
-				var blink = (_cforge_flash_timer / 6) % 2 == 0
-				if blink:
-					draw_rect(Rect2(cx-4,cy-4,cw+8,ch+8), Color(1,0.9,0.2,0.8))
-			var words = card["name"].split(" ")
-			var line_y = cy + 10.0
-			for word in words:
-				_ds_centered(word, cx, cw, line_y, WHITE, 8); line_y+=9
-			_ds_centered(_lvl_str(card), cx, cw, cy+ch-10, YELLOW, 8)
-			if is_cursor and _cforge_flash_timer == 0:
-				_ds_centered("^", cx, cw, oy+ch+6, CYAN, 8)
-	if _cforge_msg != "":
-		_dc(_cforge_msg, float(H)*0.72, RED, 8)
-	draw_line(Vector2(20,H-36), Vector2(W-20,H-36), Color(0.314,0.314,0.314), 1.0)
-	_dc("L/R:move  SPC:select  ESC:skip", float(H)-26, Color(0.471,0.471,0.471), 8)
-
-func _draw_card_arrange() -> void:
-	draw_rect(Rect2(0,0,W,H), DARK_BG)
-	_dc("SHIP SYSTEMS", 20.0, CYAN, 16)
-	draw_line(Vector2(20,36), Vector2(W-20,36), Color(0.314,0.314,0.314), 1.0)
-
-	var has_cards  = _collected.size() > 0
-	var loop_top   : float
-
-	# ── Card pick section (shown when cards are available) ──────────────────
-	if has_cards:
-		var pick_col = CYAN if _arr_focus == 0 else Color(0.4,0.4,0.4)
-		_dc("PICK A CARD", 46.0, pick_col, 8)
-		var card_row_h := 26.0
-		for i in range(_collected.size()):
-			var card = _collected[i]
-			var ry   = 57.0 + i * card_row_h
-			var col  = CARD_COLORS[card["category"]]
-			var cur  = (i == _csel_cursor and _arr_focus == 0)
-			draw_rect(Rect2(20, ry+2, 10, 14), col)
-			var prefix = "> " if cur else "  "
-			var tc     = WHITE if cur else Color(0.55,0.55,0.55)
-			_ds(prefix + card["name"] + " " + _lvl_str(card), Vector2(36, ry+12), tc, 8)
-			var ce = _card_energy(card)
-			if ce != 0:
-				var esign = "+%d"%ce if ce>0 else str(ce)
-				_ds(esign, Vector2(W-30, ry+12), YELLOW if ce>0 else RED, 8)
-		var sep_y = 57.0 + _collected.size() * card_row_h + 4.0
-		draw_line(Vector2(20, sep_y), Vector2(W-20, sep_y), Color(0.314,0.314,0.314), 1.0)
-		loop_top = sep_y + 10.0
-	else:
-		loop_top = 46.0
-
-	# ── Loop arrange section ────────────────────────────────────────────────
-	var loop_col  = CYAN if (_arr_focus == 1 or not has_cards) else Color(0.4,0.4,0.4)
-	_dc("WEAPONS", loop_top + 2.0, loop_col, 7)
-	var n    = _player.loop.size()
-	var NW_W = 44.0
-	var ch   = 52.0; var gap = 4.0
-	var cw   = int(clamp((W - 24.0 - NW_W - 6.0) / max(n,1) - 4, 26, 42))
-	var tw   = n*(cw+gap) + NW_W + gap
-	var ox   = (W-tw)/2.0
-	var oy_base = loop_top + 14.0
-
-	for i in range(n):
-		var card      = _player.loop[i]
-		var cx        = ox + i*(cw+gap)
-		var col       = CARD_COLORS[card["category"]]
-		var is_cursor = (i == _arr_cursor and (_arr_focus == 1 or not has_cards))
-		var is_held   = (_arr_held != null and i == _arr_held)
-		var cy        = oy_base - 8 if is_held else oy_base
-		var dark      = col * Color(0.25,0.25,0.25,1)
-		if is_held: draw_rect(Rect2(cx-1,cy-1,cw+2,ch+2), WHITE)
-		draw_rect(Rect2(cx,cy,cw,ch), dark if not is_held else col)
-		draw_rect(Rect2(cx,cy,cw,6), col)
-		var border = WHITE if is_held else (CYAN if is_cursor else Color(0.25,0.25,0.25))
-		draw_rect(Rect2(cx,cy,cw,ch), border, false, 2.0)
-		var words = card["name"].split(" ")
-		var line_y = cy + 10.0
-		for word in words:
-			_ds_centered(word, cx, cw, line_y, WHITE, 7); line_y+=8
-		_ds_centered(_lvl_str(card), cx, cw, cy+ch-10, YELLOW, 7)
-		var ce = _card_energy(card)
-		if ce != 0:
-			var esign = "+%d"%ce if ce>0 else str(ce)
-			_ds_centered(esign, cx, cw, cy+ch-2, YELLOW if ce>0 else RED, 7)
-		if is_cursor and _arr_held==null:
-			_ds_centered("^", cx, cw, oy_base+ch+5, CYAN, 7)
-	# NEXT WAVE / CLOSE card
-	var nw_cx  = ox + n*(cw+gap)
-	var nw_cur = (_arr_cursor == n and (_arr_focus == 1 or not has_cards))
-	var nw_col = Color(0.1, 0.6, 0.2)
-	draw_rect(Rect2(nw_cx, oy_base, NW_W, ch), Color(0.04,0.15,0.06))
-	draw_rect(Rect2(nw_cx, oy_base, NW_W, 6), nw_col)
-	draw_rect(Rect2(nw_cx, oy_base, NW_W, ch), CYAN if nw_cur else Color(0.25,0.25,0.25), false, 2.0)
-	var nw_label = ["CLOSE",""] if _arr_from_playing else ["NEXT","WAVE"]
-	_ds_centered(nw_label[0], nw_cx, NW_W, oy_base+13, nw_col, 7)
-	if nw_label[1] != "": _ds_centered(nw_label[1], nw_cx, NW_W, oy_base+24, nw_col, 7)
-	if nw_cur and _arr_held == null:
-		_ds_centered("^", nw_cx, NW_W, oy_base+ch+5, CYAN, 7)
-
-	# Energy summary + passives
-	var below = oy_base + ch + 8.0
-	var gen = 0; var cost = 0
-	for c in _player.loop + _player.passives:
-		var ce = _card_energy(c)
-		if ce>0: gen += ce
-		else: cost += ce
-	var net_col = Color(0.235,0.863,0.392) if gen+cost>=0 else RED
-	_dc("+%d gen  %d cost  net %+d/cycle"%[gen,cost,gen+cost], below + 12.0, net_col, 7)
-
-	var ps_y  = below + 28.0
-	_dc("PASSIVES  %d / 2" % _player.passives.size(), ps_y - 2.0, Color(0.6,0.6,0.6), 7)
-	var ps_cw = 44.0; var ps_ch = 48.0; var ps_gap = 8.0
-	var ps_ox = (W - 2*(ps_cw+ps_gap)) / 2.0
-	ps_y += 10.0
-	for i in range(2):
-		var px = ps_ox + i*(ps_cw+ps_gap); var py = ps_y
-		if i < _player.passives.size():
-			var pc  = _player.passives[i]
-			var col = CARD_COLORS.get(pc["category"], WHITE)
-			draw_rect(Rect2(px,py,ps_cw,ps_ch), col * 0.2)
-			draw_rect(Rect2(px,py,ps_cw,6), col)
-			draw_rect(Rect2(px,py,ps_cw,ps_ch), col, false, 1.5)
-			var words = pc["name"].split(" ")
-			var ly = py + 10.0
-			for word in words: _ds_centered(word, px, ps_cw, ly, WHITE, 7); ly+=8
-			_ds_centered(_lvl_str(pc), px, ps_cw, py+ps_ch-10, YELLOW, 7)
-			var ce = _card_energy(pc)
-			if ce != 0:
-				var esign = "+%d"%ce if ce>0 else str(ce)
-				_ds_centered(esign, px, ps_cw, py+ps_ch-2, YELLOW if ce>0 else RED, 7)
-		else:
-			draw_rect(Rect2(px,py,ps_cw,ps_ch), Color(0.08,0.08,0.08))
-			draw_rect(Rect2(px,py,ps_cw,ps_ch), Color(0.25,0.25,0.25), false, 1.0)
-			_ds_centered("EMPTY", px, ps_cw, py+ps_ch/2-4, Color(0.4,0.4,0.4), 7)
-
-	draw_line(Vector2(20,H-36), Vector2(W-20,H-36), Color(0.314,0.314,0.314), 1.0)
-	var hint2 = "TAB:switch section  " if has_cards else ""
-	var close_hint = "I/ESC:close" if _arr_from_playing else "SPC:next wave"
-	_dc("%sSPC:pick/drop  L/R:move  Z:del  %s" % [hint2, close_hint], float(H)-26, Color(0.471,0.471,0.471), 7)
-
-func _draw_card_replace() -> void:
-	draw_rect(Rect2(0,0,W,H), DARK_BG)
-	_dc("DECK FULL", 20.0, RED, 16)
-	_dc("select card to replace", 46.0, WHITE, 8)
-	draw_line(Vector2(20,60), Vector2(W-20,60), Color(0.314,0.314,0.314), 1.0)
-	# New card preview
-	var ncy = 80.0; var ncw = 44.0; var nch = 56.0
-	var nc = _replace_card
-	var ncol = CARD_COLORS.get(nc.get("category",""), WHITE)
-	draw_rect(Rect2(W/2-ncw/2, ncy, ncw, nch), ncol*0.2)
-	draw_rect(Rect2(W/2-ncw/2, ncy, ncw, 6), ncol)
-	draw_rect(Rect2(W/2-ncw/2, ncy, ncw, nch), ncol, false, 2.0)
-	_dc("NEW", ncy+10, WHITE, 7)
-	_dc(nc.get("name","?"), ncy+22, WHITE, 7)
-	_ds_centered(_lvl_str(nc), W/2-ncw/2, ncw, ncy+nch-10, YELLOW, 7)
-	_dc("replace which?", ncy+nch+14, CYAN, 8)
-	# Existing loop cards
-	var n = _player.loop.size()
-	var cw = int(clamp((W-24.0)/max(n,1)-4, 28, 44))
-	var ch = 56.0; var gap = 4.0
-	var tw = n*(cw+gap); var ox = (W-tw)/2.0; var oy = ncy+nch+32.0
-	for i in range(n):
-		var card = _player.loop[i]
-		var cx = ox + i*(cw+gap); var cy = oy
-		var is_cur = (i == _replace_cursor)
-		var col2 = CARD_COLORS.get(card["category"], WHITE)
-		draw_rect(Rect2(cx,cy,cw,ch), col2*0.15)
-		draw_rect(Rect2(cx,cy,cw,6), col2)
-		var border = CYAN if is_cur else Color(0.314,0.314,0.314)
-		draw_rect(Rect2(cx,cy,cw,ch), border, false, 2.0)
-		var words = card["name"].split(" "); var ly = cy+10.0
-		for word in words: _ds_centered(word, cx, cw, ly, WHITE, 7); ly+=8
-		_ds_centered(_lvl_str(card), cx, cw, cy+ch-10, YELLOW, 7)
-		if is_cur: _ds_centered("^", cx, cw, oy+ch+6, CYAN, 8)
-	draw_line(Vector2(20,H-36), Vector2(W-20,H-36), Color(0.314,0.314,0.314), 1.0)
-	_dc("SPC:replace  L/R:move", float(H)-26, Color(0.471,0.471,0.471), 8)
 
 func _draw_game_over() -> void:
 	_dc("GAME OVER",  float(H)/2-30, RED,   16)
@@ -2296,90 +2086,368 @@ func _card_energy(card: Dictionary) -> int:
 		return card.get("level", 1) + 1
 	if card.get("effect", "") == "main_shot":
 		return -(card.get("level", 1) - 1)  # I=0  II=-1  III=-2
+	if card.get("effect", "") == "spread_front":
+		return -(card.get("level", 1) - 1)  # I=0  II=-1  III=-2
 	return card["energy"] as int
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Card operation screen
+# Right panel (16:9 layout)
 # ─────────────────────────────────────────────────────────────────────────────
-func _draw_card_op() -> void:
-	draw_rect(Rect2(0,0,W,H), DARK_BG)
-	var subtitle := "SELECT FIRST CARD" if _card_op_sel1 == -1 else "SELECT MATCHING CARD"
-	_dc("FORGE", 16.0, YELLOW, 16)
-	_dc(subtitle, 44.0, WHITE, 8)
-	draw_line(Vector2(20,60), Vector2(W-20,60), Color(0.314,0.314,0.314), 1.0)
+func _draw_right_panel() -> void:
+	draw_rect(Rect2(PANEL_X, 0, PANEL_W, TOTAL_H), Color(0.012, 0.012, 0.025))
+	draw_line(Vector2(PANEL_X, 0), Vector2(PANEL_X, TOTAL_H), Color(0.18,0.18,0.22), 1.5)
 
-	if not _player or _player.loop.is_empty():
-		_dc("LOOP IS EMPTY", H/2.0-8, Color(0.627,0.627,0.627), 8)
-	else:
-		var n   = _player.loop.size()
-		var cw  = int(clamp((W-24.0)/n-4, 28, 44))
-		var ch  = 60.0; var gap = 4.0
-		var tw  = n*(cw+gap)-gap
-		var ox  = (W-tw)/2.0; var oy = H/2.0 - ch/2.0
-		for i in range(n):
-			var card      = _player.loop[i]
-			var cx        = ox + i*(cw+gap)
-			var col       = CARD_COLORS[card["category"]]
-			var dark      = col * Color(0.25,0.25,0.25,1)
-			var is_cursor = (i == _card_op_cursor)
-			var is_sel1   = (i == _card_op_sel1)
-			var cy        = oy - 8.0 if is_cursor else oy
-			if is_sel1:
-				draw_rect(Rect2(cx-2,cy-2,cw+4,ch+4), YELLOW)
-			draw_rect(Rect2(cx,cy,cw,ch), col if is_cursor else dark)
-			draw_rect(Rect2(cx,cy,cw,6), col)
-			var border_col: Color
-			if is_sel1:    border_col = YELLOW
-			elif is_cursor: border_col = WHITE
-			else:           border_col = Color(0.314,0.314,0.314)
-			draw_rect(Rect2(cx,cy,cw,ch), border_col, false, 2.0)
-			var words = card["name"].split(" ")
-			var line_y = cy + 10.0
-			for word in words:
-				_ds_centered(word, cx, cw, line_y, WHITE, 8); line_y+=9
-			_ds_centered(_lvl_str(card), cx, cw, cy+ch-10, YELLOW, 8)
-			if is_cursor:
-				_ds_centered("^", cx, cw, oy+ch+6, CYAN, 8)
+	if _st == GS.CARD_ARRANGE:
+		_draw_panel_card_arrange()
+		return
 
-	if _card_op_msg != "":
-		_dc(_card_op_msg, H*0.72, RED, 8)
+	draw_line(Vector2(PANEL_X, SYS_H),       Vector2(TOTAL_W, SYS_H),          Color(0.18,0.18,0.22), 1.5)
+	draw_line(Vector2(PANEL_X+BOT_W, SYS_H), Vector2(PANEL_X+BOT_W, TOTAL_H), Color(0.18,0.18,0.22), 1.5)
 
-	draw_line(Vector2(20,H-36), Vector2(W-20,H-36), Color(0.314,0.314,0.314), 1.0)
-	_dc("L/R:move  X:select  ESC:cancel", float(H)-26, Color(0.471,0.471,0.471), 8)
+	# EVO_FLASH: pulse the systems section with a purple glow
+	if _st == GS.EVO_FLASH:
+		var blink_on : bool = (_evo_flash_timer / 8) % 2 == 0
+		if blink_on:
+			draw_rect(Rect2(PANEL_X, 0, PANEL_W, SYS_H), Color(0.35, 0.1, 0.55, 0.10))
+			draw_line(Vector2(PANEL_X, 0), Vector2(PANEL_X, SYS_H),
+				Color(0.698, 0.275, 1.0), 3.0)
+			_ds_centered("EVOLUTION  AVAILABLE",
+				float(PANEL_X), float(PANEL_W), float(SYS_H) - 32.0,
+				Color(0.698, 0.275, 1.0, 0.9), 16)
+	_draw_panel_systems()
+	_draw_panel_map()
+	_draw_panel_codex()
 
-func _execute_card_op() -> void:
-	var loop = _player.loop
-	if loop.is_empty(): _arr_focus=0; _st=GS.CARD_ARRANGE; return
-	# only deck_fuse remains
-	if _card_op_sel1 == -1:
-		_card_op_sel1 = _card_op_cursor
-		_card_op_msg  = "NOW SELECT MATCHING CARD"
-	else:
-		if _card_op_cursor == _card_op_sel1:
-			_card_op_msg = "PICK A DIFFERENT CARD"
-			return
-		var i1    = _card_op_sel1
-		var i2    = _card_op_cursor
-		var card1 = loop[i1]
-		var card2 = loop[i2]
-		if card1["id"] != card2["id"]:
-			_card_op_msg = "CARDS MUST BE IDENTICAL"
-			return
-		if card1.get("level", 1) != card2.get("level", 1):
-			_card_op_msg = "CARDS MUST BE SAME LEVEL"
-			return
-		var new_lvl = min(max(card1.get("level",1), card2.get("level",1)) + 1, 3)
-		var fused = card1.duplicate()
-		fused["level"] = new_lvl
-		if i1 < i2:
-			loop.remove_at(i2); loop.remove_at(i1)
+func _draw_panel_card_arrange() -> void:
+	var px := float(PANEL_X); var pw := float(PANEL_W)
+	var pad := 24.0; var bar_x := px + pad
+	if not _player: return
+	var p = _player
+	var has_cards : bool = _collected.size() > 0
+
+	# Header
+	_ds_centered("SHIP LOADOUT", px, pw, 14.0, CYAN, 16)
+	draw_line(Vector2(px+16, 38), Vector2(px+pw-16, 38), Color(0.15,0.15,0.2), 1.0)
+	var cur_y := 52.0
+
+	# ── Card pick section ────────────────────────────────────────────────────
+	if has_cards:
+		var pick_col : Color = CYAN if _arr_focus == 0 else Color(0.4,0.4,0.4)
+		_ds("SELECT UPGRADE", Vector2(bar_x, cur_y+14), pick_col, 14)
+		cur_y += 28.0
+		for i in range(_collected.size()):
+			var card : Dictionary = _collected[i]
+			var col : Color = CARD_COLORS[card["category"]]
+			var is_cur : bool = (i == _csel_cursor and _arr_focus == 0)
+			draw_rect(Rect2(bar_x+2, cur_y+5, 12, 14), col)
+			var tc : Color = WHITE if is_cur else Color(0.55,0.55,0.55)
+			var prefix : String = "> " if is_cur else "  "
+			_ds(prefix + (card["name"] as String) + " " + _lvl_str(card),
+				Vector2(bar_x+20, cur_y+14), tc, 12)
+			var ce : int = _card_energy(card)
+			if ce != 0:
+				var esign : String = "+%d"%ce if ce>0 else str(ce)
+				_ds(esign, Vector2(px+pw-pad-36, cur_y+14), YELLOW if ce>0 else RED, 12)
+			cur_y += 26.0
+		draw_line(Vector2(bar_x, cur_y+6), Vector2(px+pw-pad, cur_y+6), Color(0.25,0.25,0.25), 1.0)
+		cur_y += 18.0
+
+	# ── Weapons section ──────────────────────────────────────────────────────
+	var wp_col : Color = CYAN if (_arr_focus == 1 or not has_cards) else Color(0.4,0.4,0.4)
+	_ds("WEAPONS", Vector2(bar_x, cur_y+14), wp_col, 14)
+	cur_y += 28.0
+
+	var WP_W := 196.0; var WP_H := 130.0; var wp_gap := 18.0; var NW_W := 70.0
+	var wp_sx := px + (pw - (3.0*(WP_W+wp_gap) + NW_W)) / 2.0
+	var wp_y  := cur_y + 18.0  # room for ACTIVE badge
+	var weapons := [p.primary, p.secondary, p.tertiary]
+	var wp_labels := ["PRIMARY", "SECONDARY", "TERTIARY"]
+	var _aw : int = p.active_weapon as int
+	var in_wpn : bool = (_arr_focus == 1 or not has_cards)
+
+	for i in range(3):
+		var weapon : Dictionary = weapons[i]
+		var cx     := wp_sx + i*(WP_W+wp_gap)
+		var is_cursor : bool = (i == _arr_cursor and in_wpn)
+		var is_active : bool = (i == _aw)
+		var r := Rect2(cx, wp_y, WP_W, WP_H)
+		if is_active:
+			draw_rect(Rect2(cx, wp_y-18, WP_W, 16), Color(0.0,0.25,0.45))
+			_ds_centered("ACTIVE", cx, WP_W, wp_y-14, CYAN, 10)
+		if weapon.is_empty():
+			draw_rect(r, Color(0.03,0.03,0.05))
+			draw_rect(r, CYAN if is_cursor else Color(0.12,0.12,0.15), false, 2.0 if is_cursor else 1.5)
+			_ds_centered(wp_labels[i], cx, WP_W, wp_y+26, Color(0.28,0.28,0.3), 10)
+			_ds_centered("EMPTY",     cx, WP_W, wp_y+48, Color(0.18,0.18,0.2), 10)
 		else:
-			loop.remove_at(i1); loop.remove_at(i2)
-		var insert_at = min(i1, i2)
-		loop.insert(insert_at, fused)
-		_card_op_cursor = clamp(insert_at, 0, max(loop.size()-1, 0))
-		if _player.loop_idx >= loop.size():
-			_player.loop_idx = max(loop.size()-1, 0)
-			_player.loop_timer = 0
-		_evo_ready = false
-		_st = GS.CARD_ARRANGE
+			var col : Color = CARD_COLORS[weapon["category"]]
+			draw_rect(r, col * Color(0.12,0.12,0.12,1))
+			draw_rect(r, CYAN if is_cursor else Color(0.18,0.18,0.18), false, 2.0 if is_cursor else 1.5)
+			draw_rect(Rect2(cx, wp_y, WP_W, 6), col)
+			_ds_centered(wp_labels[i], cx, WP_W, wp_y+14, Color(0.45,0.45,0.45), 10)
+			var words : PackedStringArray = (weapon["name"] as String).split(" "); var ly := wp_y+36.0
+			for word in words:
+				_ds_centered(word, cx, WP_W, ly, WHITE if is_active else Color(0.55,0.55,0.55), 12)
+				ly += 14.0
+			_ds_centered(_lvl_str(weapon), cx, WP_W, wp_y+WP_H-12, YELLOW, 10)
+		if is_cursor:
+			_ds_centered("^", cx, WP_W, wp_y+WP_H+6, CYAN, 10)
+
+	# NEXT WAVE / CLOSE button
+	var nw_cx  := wp_sx + 3.0*(WP_W+wp_gap)
+	var nw_cur : bool = (_arr_cursor == 3 and in_wpn)
+	var nw_col := Color(0.1, 0.6, 0.2)
+	draw_rect(Rect2(nw_cx, wp_y, NW_W, WP_H), Color(0.04,0.15,0.06))
+	draw_rect(Rect2(nw_cx, wp_y, NW_W, 6), nw_col)
+	draw_rect(Rect2(nw_cx, wp_y, NW_W, WP_H), CYAN if nw_cur else Color(0.25,0.25,0.25), false, 2.0 if nw_cur else 1.5)
+	var nw_lines := ["CLOSE",""] if _arr_from_playing else ["NEXT","WAVE"]
+	_ds_centered(nw_lines[0], nw_cx, NW_W, wp_y+WP_H/2-14, nw_col, 12)
+	if nw_lines[1] != "": _ds_centered(nw_lines[1], nw_cx, NW_W, wp_y+WP_H/2+4, nw_col, 12)
+	if nw_cur: _ds_centered("^", nw_cx, NW_W, wp_y+WP_H+6, CYAN, 10)
+
+	cur_y = wp_y + WP_H + 24.0
+
+	# ── Energy summary ───────────────────────────────────────────────────────
+	var gen := 0; var cost := 0
+	for c in p.passives:
+		var ce : int = _card_energy(c)
+		if ce > 0: gen += ce
+		else: cost += ce
+	for ww in [p.primary, p.secondary, p.tertiary]:
+		if not (ww as Dictionary).is_empty():
+			var ce : int = _card_energy(ww as Dictionary)
+			if ce > 0: gen += ce
+			else: cost += ce
+	var net_col : Color = Color(0.235,0.863,0.392) if gen+cost>=0 else RED
+	_ds("+%d gen  %d cost  net %+d/cycle" % [gen,cost,gen+cost],
+		Vector2(bar_x, cur_y+12), net_col, 10)
+	cur_y += 32.0
+
+	# ── Passives ─────────────────────────────────────────────────────────────
+	_ds("PASSIVES  %d / %d" % [p.passives.size(), MAX_PASSIVES],
+		Vector2(bar_x, cur_y+12), Color(0.45,0.45,0.45), 12)
+	cur_y += 26.0
+	var ps_cw := 130.0; var ps_ch := 64.0; var ps_gap := 14.0
+	var ps_total := MAX_PASSIVES*(ps_cw+ps_gap) - ps_gap
+	var ps_sx := px + (pw - ps_total)/2.0
+	for i in range(MAX_PASSIVES):
+		var ppx := ps_sx + i*(ps_cw+ps_gap)
+		if i < p.passives.size():
+			var pc : Dictionary = p.passives[i]
+			var col : Color = CARD_COLORS.get(pc["category"], WHITE)
+			draw_rect(Rect2(ppx,cur_y,ps_cw,ps_ch), col * 0.12)
+			draw_rect(Rect2(ppx,cur_y,ps_cw,6), col)
+			draw_rect(Rect2(ppx,cur_y,ps_cw,ps_ch), col, false, 1.0)
+			var words2 : PackedStringArray = (pc["name"] as String).split(" "); var ly2 := cur_y+16.0
+			for word in words2: _ds_centered(word, ppx, ps_cw, ly2, WHITE, 10); ly2+=12.0
+			_ds_centered(_lvl_str(pc), ppx, ps_cw, cur_y+ps_ch-11, YELLOW, 10)
+		else:
+			draw_rect(Rect2(ppx,cur_y,ps_cw,ps_ch), Color(0.03,0.03,0.03))
+			draw_rect(Rect2(ppx,cur_y,ps_cw,ps_ch), Color(0.12,0.12,0.12), false, 1.0)
+			_ds_centered("EMPTY", ppx, ps_cw, cur_y+ps_ch/2-5, Color(0.28,0.28,0.28), 10)
+	cur_y += ps_ch + 24.0
+
+	# ── Hints ────────────────────────────────────────────────────────────────
+	draw_line(Vector2(bar_x, cur_y), Vector2(px+pw-pad, cur_y), Color(0.2,0.2,0.2), 1.0)
+	cur_y += 16.0
+	var hint_tab : String = "TAB:switch  " if has_cards else ""
+	var hint_close : String = "I/ESC:close" if _arr_from_playing else "SPC:next wave"
+	_ds_centered("%sSPC:pick  L/R:move  Z:clear  %s" % [hint_tab, hint_close],
+		px, pw, cur_y+10, Color(0.4,0.4,0.4), 10)
+
+func _draw_panel_systems() -> void:
+	var px := float(PANEL_X); var pw := float(PANEL_W)
+	_ds_centered("SHIP SYSTEMS", px, pw, 14.0, CYAN, 16)
+	draw_line(Vector2(px+16, 38), Vector2(px+pw-16, 38), Color(0.15,0.15,0.2), 1.0)
+	if not _player: return
+	var p = _player
+	var pad := 24.0
+
+	# ── Weapon slots ─────────────────────────────────────────────────────────
+	var WP_W := 196.0; var WP_H := 130.0; var wp_gap := 18.0
+	var wp_total := 3.0*(WP_W+wp_gap) - wp_gap
+	var wp_sx    := px + (pw - wp_total) / 2.0
+	var wp_y     := 52.0
+	var weapons  := [p.primary, p.secondary, p.tertiary]
+	var wp_labels := ["PRIMARY", "SECONDARY", "TERTIARY"]
+	var _aw : int = p.active_weapon as int
+	for i in range(3):
+		var weapon   := weapons[i] as Dictionary
+		var cx       := wp_sx + i*(WP_W+wp_gap)
+		var is_active : bool = (i == _aw)
+		var r        := Rect2(cx, wp_y, WP_W, WP_H)
+		# active badge above tile
+		if is_active:
+			draw_rect(Rect2(cx, wp_y-18, WP_W, 16), Color(0.0,0.25,0.45))
+			_ds_centered("ACTIVE", cx, WP_W, wp_y-14, CYAN, 10)
+		if weapon.is_empty():
+			draw_rect(r, Color(0.03,0.03,0.05))
+			draw_rect(r, CYAN if is_active else Color(0.12,0.12,0.15), false, 1.5)
+			_ds_centered(wp_labels[i], cx, WP_W, wp_y+26, Color(0.28,0.28,0.3), 10)
+			_ds_centered("EMPTY",     cx, WP_W, wp_y+48, Color(0.18,0.18,0.2), 10)
+		else:
+			var col : Color = CARD_COLORS[weapon["category"]]
+			if is_active:
+				var progress := float(p.weapon_timer) / float(PlayerData.effective_cycle(weapon))
+				var fill_h   := int(WP_H * progress)
+				draw_rect(r, col * Color(0.12,0.12,0.12,1))
+				if fill_h > 0:
+					draw_rect(Rect2(cx, wp_y+WP_H-fill_h, WP_W, fill_h), col * Color(0.35,0.35,0.35,1))
+				draw_rect(r, WHITE, false, 2.0)
+				if p.is_starved() and (p.weapon_timer/6)%2==0:
+					draw_line(r.position, r.end, RED, 2.0)
+					draw_line(Vector2(r.position.x+r.size.x,r.position.y), Vector2(r.position.x,r.position.y+r.size.y), RED, 2.0)
+			else:
+				draw_rect(r, col * Color(0.08,0.08,0.08,1))
+				draw_rect(r, Color(0.18,0.18,0.18), false, 1.5)
+			draw_rect(Rect2(cx, wp_y, WP_W, 6), col)
+			_ds_centered(wp_labels[i], cx, WP_W, wp_y+14, Color(0.45,0.45,0.45), 10)
+			var words : PackedStringArray = (weapon["name"] as String).split(" "); var ly := wp_y+36.0
+			for word in words:
+				_ds_centered(word, cx, WP_W, ly, WHITE if is_active else Color(0.45,0.45,0.45), 12)
+				ly += 14.0
+			_ds_centered(_lvl_str(weapon), cx, WP_W, wp_y+WP_H-12, YELLOW, 10)
+			var lvl := weapon.get("level",1) as int
+			for lv in range(lvl):
+				draw_rect(Rect2(cx+6+lv*10, wp_y+8, 8, 5),
+					Color(1.0,0.9,0.2) if is_active else Color(0.38,0.34,0.06))
+
+	# ── Energy bar ───────────────────────────────────────────────────────────
+	var ey    := wp_y + WP_H + 26.0
+	var bar_x := px + pad; var bar_w := pw - pad*2.0; var bar_h := 14.0
+	var en_fill  : float = bar_w * (p.energy_pool as int) / float(p.max_energy as int)
+	var starved  : bool  = p.is_starved()
+	var blink_r  : bool  = starved and (p.weapon_timer as int / 6) % 2 == 0
+	draw_rect(Rect2(bar_x, ey, bar_w, bar_h), Color(0.08,0.05,0.0))
+	draw_rect(Rect2(bar_x, ey, en_fill, bar_h),
+		Color(0.863,0.118,0.118) if blink_r else Color(1.0,0.843,0.0))
+	draw_rect(Rect2(bar_x, ey, bar_w, bar_h),
+		Color(1,0.314,0.314) if blink_r else Color(1.0,0.941,0.314), false, 1.0)
+	_ds("ENERGY  %d / %d" % [p.energy_pool, p.max_energy],
+		Vector2(bar_x, ey-16), Color(0.8,0.75,0.25), 12)
+
+	# ── Hull bar ─────────────────────────────────────────────────────────────
+	var hy   := ey + bar_h + 22.0
+	var hp_fill : float = bar_w * (p.lives as int) / float(p.max_lives as int)
+	draw_rect(Rect2(bar_x, hy, bar_w, bar_h), Color(0.02,0.07,0.02))
+	draw_rect(Rect2(bar_x, hy, hp_fill, bar_h), Color(0.118,0.863,0.118))
+	draw_rect(Rect2(bar_x, hy, bar_w, bar_h), Color(0.314,1.0,0.314), false, 1.0)
+	_ds("HULL  %d / %d" % [p.lives, p.max_lives],
+		Vector2(bar_x, hy-16), Color(0.2,0.75,0.2), 12)
+
+	# ── Passives ─────────────────────────────────────────────────────────────
+	var psy  := hy + bar_h + 26.0
+	_ds("PASSIVES  %d / %d" % [p.passives.size(), MAX_PASSIVES],
+		Vector2(bar_x, psy), Color(0.45,0.45,0.45), 12)
+	psy += 18.0
+	var ps_cw := 130.0; var ps_ch := 64.0; var ps_gap := 14.0
+	var ps_total := MAX_PASSIVES*(ps_cw+ps_gap) - ps_gap
+	var ps_sx    := px + (pw - ps_total)/2.0
+	for i in range(MAX_PASSIVES):
+		var ppx := ps_sx + i*(ps_cw+ps_gap)
+		if i < p.passives.size():
+			var pc  : Dictionary = p.passives[i]
+			var col : Color = CARD_COLORS.get(pc["category"], WHITE)
+			draw_rect(Rect2(ppx,psy,ps_cw,ps_ch), col * 0.12)
+			draw_rect(Rect2(ppx,psy,ps_cw,6), col)
+			draw_rect(Rect2(ppx,psy,ps_cw,ps_ch), col, false, 1.0)
+			var words : PackedStringArray = (pc["name"] as String).split(" "); var ly2 := psy+16.0
+			for word in words:
+				_ds_centered(word, ppx, ps_cw, ly2, WHITE, 10); ly2+=12.0
+			_ds_centered(_lvl_str(pc), ppx, ps_cw, psy+ps_ch-11, YELLOW, 10)
+		else:
+			draw_rect(Rect2(ppx,psy,ps_cw,ps_ch), Color(0.03,0.03,0.03))
+			draw_rect(Rect2(ppx,psy,ps_cw,ps_ch), Color(0.12,0.12,0.12), false, 1.0)
+			_ds_centered("EMPTY", ppx, ps_cw, psy+ps_ch/2-5, Color(0.28,0.28,0.28), 10)
+
+	# ── Pending (collected) cards ─────────────────────────────────────────────
+	if _collected.size() > 0:
+		var cd_y := psy + ps_ch + 24.0
+		var blink_label : bool = _st == GS.EVO_FLASH and (_evo_flash_timer / 8) % 2 == 0
+		var lbl_col : Color = Color(0.698, 0.275, 1.0) if blink_label else Color(1.0, 0.85, 0.2)
+		_ds("PENDING  %d" % _collected.size(), Vector2(bar_x, cd_y), lbl_col, 16)
+		draw_line(Vector2(bar_x, cd_y+20), Vector2(px+pw-pad, cd_y+20), Color(0.3,0.28,0.1), 1.0)
+		cd_y += 28.0
+		var row_h := 28.0
+		for card in _collected:
+			var col : Color = CARD_COLORS[card["category"]]
+			draw_rect(Rect2(bar_x, cd_y+4, 14, 16), col)
+			_ds((card["name"] as String) + " " + _lvl_str(card),
+				Vector2(bar_x+24, cd_y+16), WHITE, 12)
+			var ce : int = _card_energy(card)
+			if ce != 0:
+				var esign : String = "+%d"%ce if ce>0 else str(ce)
+				_ds(esign, Vector2(px+pw-pad-30, cd_y+16),
+					YELLOW if ce>0 else RED, 12)
+			cd_y += row_h
+
+func _draw_panel_map() -> void:
+	var mx := float(PANEL_X); var my := float(SYS_H)
+	var mw := float(BOT_W);   var mh := float(BOT_H)
+	draw_rect(Rect2(mx, my, mw, mh), Color(0.01,0.015,0.01))
+	_ds_centered("MAP", mx, mw, my+14.0, Color(0.25,0.45,0.25), 16)
+	draw_line(Vector2(mx+12, my+38), Vector2(mx+mw-12, my+38), Color(0.12,0.18,0.12), 1.0)
+	_ds_centered("TACTICAL DISPLAY", mx, mw, my+mh/2.0-10.0, Color(0.18,0.28,0.18), 12)
+	_ds_centered("COMING SOON",      mx, mw, my+mh/2.0+10.0, Color(0.18,0.28,0.18), 12)
+
+func _draw_panel_codex() -> void:
+	var cx := float(PANEL_X + BOT_W); var cy := float(SYS_H)
+	var cw := float(BOT_W);           var ch := float(BOT_H)
+	draw_rect(Rect2(cx, cy, cw, ch), Color(0.015,0.01,0.02))
+	_ds_centered("CODEX", cx, cw, cy+14.0, Color(0.6,0.25,1.0), 16)
+	draw_line(Vector2(cx+12, cy+38), Vector2(cx+cw-12, cy+38), Color(0.2,0.1,0.28), 1.0)
+
+	var fleet : FleetData = _fleet
+	if not fleet:
+		_ds_centered("NO WAVE DATA", cx, cw, cy+ch/2.0-6.0, Color(0.28,0.28,0.28), 12)
+		return
+
+	# Group enemies by type
+	var groups : Dictionary = {}
+	for e in fleet.enemies:
+		var ek : String = e.key
+		if not groups.has(ek):
+			groups[ek] = {"total":0,"alive":0,"max_hp":EnemyData.MAX_HP[ek]}
+		groups[ek]["total"] += 1
+		if e.alive: groups[ek]["alive"] += 1
+
+	var type_order  := ["e_big","e_med","e_sml"]
+	var type_names  := {"e_big":"HEAVY","e_med":"FIGHTER","e_sml":"SCOUT"}
+	var type_cols   := {
+		"e_big": Color(0.9,0.2,0.2),
+		"e_med": Color(0.9,0.55,0.1),
+		"e_sml": Color(0.35,0.7,1.0),
+	}
+
+	var card_w  := cw - 28.0; var card_h := 80.0; var card_gap := 8.0
+	var card_x  := cx + 14.0; var card_y  := cy + 44.0
+
+	for type_key in type_order:
+		if not groups.has(type_key): continue
+		var g    := groups[type_key] as Dictionary
+		var col  := type_cols[type_key] as Color
+		var dead := (g["alive"] as int) == 0
+		var bg   := col * Color(0.12,0.12,0.12,1) if not dead else Color(0.04,0.04,0.04)
+		var bdr  := col * Color(0.5,0.5,0.5,1)    if not dead else Color(0.14,0.14,0.14)
+		var tc   := WHITE                           if not dead else Color(0.3,0.3,0.3)
+		draw_rect(Rect2(card_x, card_y, card_w, card_h), bg)
+		draw_rect(Rect2(card_x, card_y, card_w, 5),      col if not dead else Color(0.18,0.18,0.18))
+		draw_rect(Rect2(card_x, card_y, card_w, card_h), bdr, false, 1.0)
+		# Name
+		_ds(type_names[type_key], Vector2(card_x+10, card_y+20), tc, 12)
+		# Alive / total count
+		var count_str := "%d / %d" % [g["alive"], g["total"]]
+		_ds(count_str, Vector2(card_x+10, card_y+38), tc, 12)
+		# HP pip row
+		var max_hp  := g["max_hp"] as int
+		var dot_y   := card_y + 58.0; var dot_x := card_x + 10.0
+		for d in range(max_hp):
+			draw_rect(Rect2(dot_x + d*14, dot_y, 11, 7), col if not dead else Color(0.18,0.18,0.18))
+		# Carrier badge
+		var has_carrier := false
+		for e in fleet.enemies:
+			if (e.key as String) == type_key and (e.carries_card as bool) and (e.alive as bool):
+				has_carrier = true; break
+		if has_carrier:
+			_ds("CARRIER", Vector2(card_x+card_w-70, card_y+20), Color(1.0,0.85,0.0), 10)
+		card_y += card_h + card_gap
