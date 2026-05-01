@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://b4trkshmp1"]
+
+[ext_resource type="Script" path="res://Main.gd" id="1_main"]
+[ext_resource type="Script" path="res://track/TrackGrid.gd" id="2_tgrd"]
+[ext_resource type="Script" path="res://train/Train.gd" id="3_train"]
+[ext_resource type="Script" path="res://ui/HUD.gd" id="4_hud"]
+[ext_resource type="Script" path="res://world/MapLayer.gd" id="5_map"]
+[ext_resource type="Script" path="res://track/TrackSystem.gd" id="6_trsys"]
+[ext_resource type="Script" path="res://combat/CombatSystem.gd" id="7_comb"]
+[ext_resource type="Script" path="res://world/LocationSystem.gd" id="8_locsys"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(160, 288)
+
+[node name="TrackGrid" type="Node2D" parent="."]
+script = ExtResource("2_tgrd")
+
+[node name="MapLayer" type="Node2D" parent="."]
+script = ExtResource("5_map")
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Train" type="Node2D" parent="."]
+script = ExtResource("3_train")
+
+[node name="Bullets" type="Node2D" parent="."]
+
+[node name="TrackSystem" type="Node" parent="."]
+script = ExtResource("6_trsys")
+
+[node name="CombatSystem" type="Node" parent="."]
+script = ExtResource("7_comb")
+
+[node name="LocationSystem" type="Node" parent="."]
+script = ExtResource("8_locsys")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Palette" type="Node2D" parent="HUD"]
+script = ExtResource("4_hud")
